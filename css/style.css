@@ -369,19 +369,17 @@ a{ color: inherit; text-decoration: none; }
 .the-space__lead strong{ color: var(--blue); font-style:normal; }
 
 .the-space__sequence{
-  display:grid; grid-template-columns: repeat(12, 1fr); gap: clamp(.8rem, 2vw, 1.4rem);
+  display:grid; grid-template-columns: repeat(4, 1fr); gap: clamp(.6rem, 1.4vw, 1rem);
 }
 .the-space__sequence figure{ margin:0; position:relative; overflow:hidden; }
-.the-space__sequence img{ width:100%; height:100%; object-fit:cover; transition: transform .8s cubic-bezier(.16,.8,.24,1); }
-.the-space__sequence figure:hover img{ transform: scale(1.045); }
+.the-space__sequence img, .the-space__sequence video{ width:100%; height:100%; object-fit:cover; transition: transform .8s cubic-bezier(.16,.8,.24,1); }
+.the-space__sequence figure:hover img, .the-space__sequence figure:hover video{ transform: scale(1.045); }
 .the-space__sequence figcaption{
-  position:absolute; left:0; right:0; bottom:0; padding: 1.1rem 1.2rem;
-  font-size: .82rem; line-height:1.4; color: var(--paper);
+  position:absolute; left:0; right:0; bottom:0; padding: .8rem .9rem;
+  font-size: .74rem; line-height:1.35; color: var(--paper);
   background: linear-gradient(0deg, rgba(23,19,15,.72), rgba(23,19,15,0));
 }
-.seq-a{ grid-column: 1 / 8; aspect-ratio: 4/3.1; }
-.seq-b{ grid-column: 8 / 13; aspect-ratio: 3/4.4; align-self:start; }
-.seq-c{ grid-column: 1 / 6; aspect-ratio: 3/4; margin-top: clamp(1rem,3vw,2.4rem); }
+.seq-a, .seq-b, .seq-c, .seq-d{ grid-column:auto; aspect-ratio: 3/4; margin-top:0; align-self:auto; }
 
 /* mobile: trade the asymmetric grid for a full-bleed horizontal swipe rail —
    snap-scrolled, edge-to-edge, each frame peeking the next */
@@ -393,7 +391,7 @@ a{ color: inherit; text-decoration: none; }
     margin: 0 calc(var(--edge) * -1); padding: 0 var(--edge);
   }
   .the-space__sequence::-webkit-scrollbar{ display:none; }
-  .seq-a, .seq-b, .seq-c{
+  .seq-a, .seq-b, .seq-c, .seq-d{
     grid-column:auto; flex:0 0 80vw; margin-top:0;
     aspect-ratio: 4/5; scroll-snap-align:start;
   }

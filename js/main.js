@@ -3,16 +3,16 @@
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* ---------- hero video ---------- */
-  var heroVideo = document.querySelector("[data-hero-video]");
-  if (heroVideo) {
+  /* ---------- autoplay videos (hero + decorative background clips) ---------- */
+  var autoplayVideos = document.querySelectorAll("video[autoplay]");
+  autoplayVideos.forEach(function (v) {
     if (reduceMotion) {
-      heroVideo.pause();
+      v.pause();
     } else {
-      var playPromise = heroVideo.play();
+      var playPromise = v.play();
       if (playPromise && playPromise.catch) playPromise.catch(function () {});
     }
-  }
+  });
 
   /* ---------- nav height sync ----------
      keeps the fullscreen index panel's top clearance in step with the
