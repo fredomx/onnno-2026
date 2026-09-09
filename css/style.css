@@ -10,9 +10,7 @@
   --ink:        #17130f;
   --ink-soft:   #524b41;
   --ink-faint:  #8b8274;
-  --blue:       #232c4d;
-  --blue-logo:  #0845A0;
-  --olive-light:#b7bd8d;
+  --blue:       #1A3560;
   --line:       rgba(23,19,15,0.14);
   --line-strong:rgba(23,19,15,0.28);
 
@@ -527,7 +525,7 @@ a{ color: inherit; text-decoration: none; }
 
 /* ============================== THE OVEN ============================== */
 .oven{
-  background: var(--blue-logo);
+  background: var(--blue);
   color: var(--paper);
   display:flex; flex-direction:column; align-items:center; text-align:center;
   padding-top: clamp(5rem, 10vw, 8rem);
@@ -543,30 +541,6 @@ a{ color: inherit; text-decoration: none; }
 .oven__text{ max-width: 42ch; display:flex; flex-direction:column; gap: 1rem; align-items:center; }
 .oven__text p{ margin:0; color: rgba(243,237,225,.92); }
 .oven__small{ font-size: .85rem; letter-spacing:.02em; color: rgba(243,237,225,.65); font-style:italic; font-family: var(--serif); }
-
-/* ============================== INSPIRATION ============================== */
-.inspiration{ background: var(--ink); color: var(--paper); }
-.inspiration .chapter__index{ color: rgba(243,237,225,.6); }
-.inspiration__lead{ max-width: 40ch; color: rgba(243,237,225,.75); font-size: 1.05rem; margin-top: 1rem; }
-
-.inspiration__list{ list-style:none; margin:0 0 clamp(3rem,7vw,5rem); padding:0; border-top:1px solid rgba(243,237,225,.16); }
-.inspiration__list li{
-  border-bottom: 1px solid rgba(243,237,225,.16);
-  padding: clamp(1.2rem, 3vw, 2rem) 0;
-  display:grid; grid-template-columns: 1fr 1fr 2fr; gap: 1.5rem; align-items:baseline;
-}
-.inspiration__name{ font-family: var(--serif); font-style:italic; font-weight:400; font-size: clamp(1.3rem, 2.4vw, 1.9rem); }
-.inspiration__field{ font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color: var(--olive-light); }
-.inspiration__list p{ margin:0; font-size:.96rem; color: rgba(243,237,225,.72); max-width:48ch; }
-
-@media (max-width: 780px){
-  .inspiration__list li{ grid-template-columns: 1fr; gap:.4rem; }
-}
-
-.inspiration__playlist{
-  font-family: var(--serif); font-style:italic; font-size: clamp(1.15rem,2.2vw,1.55rem);
-  max-width: 58ch; color: rgba(243,237,225,.9); margin:0; line-height:1.4;
-}
 
 /* ============================== FINAL STATEMENT ============================== */
 .finale{
@@ -598,6 +572,8 @@ a{ color: inherit; text-decoration: none; }
 }
 .visit__label{ display:block; font-size:.7rem; letter-spacing:.16em; text-transform:uppercase; color: var(--ink-faint); margin-bottom:.6rem; }
 .visit__grid p{ margin:0; color: var(--ink-soft); }
+.visit__grid p + p{ margin-top: .8rem; }
+.visit__grid p strong{ color: var(--ink); font-weight:600; }
 .visit__grid a{ border-bottom: 1px solid var(--line-strong); }
 @media (max-width: 720px){ .visit__grid{ grid-template-columns: 1fr; text-align:center; } }
 
