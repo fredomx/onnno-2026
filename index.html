@@ -52,7 +52,12 @@
   <!-- ============ HERO ============ -->
   <section class="hero" id="hero" data-nav-dark>
     <div class="hero__frame">
-      <img class="hero__img" data-parallax="0.18" src="assets/img/hero-shelf.jpg" alt="Repisa de madera en Onnno con libros de cocina, una flor de ave del paraíso, un mandil azul marino colgado y un letrero pintado a mano que dice Todos Somos Onnno.">
+      <video class="hero__img" data-hero-video autoplay muted loop playsinline preload="auto" poster="assets/img/hero-video-poster.jpg" aria-hidden="true">
+        <source src="assets/video/hero-desktop.webm" type="video/webm" media="(min-width: 800px)">
+        <source src="assets/video/hero-desktop.mp4" type="video/mp4" media="(min-width: 800px)">
+        <source src="assets/video/hero-mobile.webm" type="video/webm">
+        <source src="assets/video/hero-mobile.mp4" type="video/mp4">
+      </video>
       <div class="hero__vignette" aria-hidden="true"></div>
     </div>
 

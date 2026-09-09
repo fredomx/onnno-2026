@@ -3,6 +3,17 @@
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* ---------- hero video ---------- */
+  var heroVideo = document.querySelector("[data-hero-video]");
+  if (heroVideo) {
+    if (reduceMotion) {
+      heroVideo.pause();
+    } else {
+      var playPromise = heroVideo.play();
+      if (playPromise && playPromise.catch) playPromise.catch(function () {});
+    }
+  }
+
   /* ---------- nav overlay ---------- */
   var toggle = document.querySelector("[data-nav-toggle]");
   var panel = document.querySelector("[data-nav-panel]");
