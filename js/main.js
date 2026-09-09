@@ -53,27 +53,6 @@
     });
   });
 
-  /* ---------- mosaic reveal (its own small choreography, unchanged) ---------- */
-  var mosaicEls = document.querySelectorAll("[data-mosaic]");
-  if (mosaicEls.length) {
-    if ("IntersectionObserver" in window) {
-      var mosaicIo = new IntersectionObserver(
-        function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-              entry.target.classList.add("is-visible");
-              mosaicIo.unobserve(entry.target);
-            }
-          });
-        },
-        { threshold: 0.16, rootMargin: "0px 0px -8% 0px" }
-      );
-      mosaicEls.forEach(function (el) { mosaicIo.observe(el); });
-    } else {
-      mosaicEls.forEach(function (el) { el.classList.add("is-visible"); });
-    }
-  }
-
   /* ==========================================================================
      Scroll-scrubbed motion engine
      Every .reveal element gets a 0→1 progress driven straight from its
@@ -140,6 +119,22 @@
     var revealRects = new Array(revealData.length);
     var parallaxRects = new Array(parallaxEls.length);
 
+    /* ---------- growth: pinned card stack ----------
+       The wrapper is given extra scroll height once, up front, so the
+       section can stay pinned (position:sticky in CSS) while that runway
+       scrolls past; each frame turns how far into that runway we are into
+       a deck position for every card — the active one centered and sharp,
+       waiting ones stacked small behind it, passed ones spinning away. */
+    var growthPin = document.querySelector("[data-growth-pin]");
+    var growthTrack = document.querySelector("[data-growth-track]");
+    var growthCount = document.querySelector("[data-growth-count]");
+    var growthCards = growthTrack ? Array.prototype.slice.call(growthTrack.children) : [];
+    var growthShownIndex = -1;
+    var GROWTH_SCROLL_PER_CARD = 0.55; // viewport-heights of scroll per card change
+    if (growthPin && growthCards.length) {
+      growthPin.style.height = (window.innerHeight * (1 + (growthCards.length - 1) * GROWTH_SCROLL_PER_CARD)) + "px";
+    }
+
     function frame() {
       var vh = window.innerHeight;
       var scrollY = window.scrollY || window.pageYOffset;
@@ -186,6 +181,59 @@
         var progress = (rect.top + rect.height / 2 - vh / 2) / vh;
         var offset = progress * strength * 100;
         parallaxEls[j].style.transform = "translate3d(0," + offset.toFixed(2) + "px,0) scale(1.12)";
+      }
+
+      if (growthPin && growthCards.length) {
+        var pinRect = growthPin.getBoundingClientRect();
+        var runway = growthPin.offsetHeight - vh;
+        var pinProgress = runway > 0 ? -pinRect.top / runway : 0;
+        if (pinProgress < 0) pinProgress = 0;
+        else if (pinProgress > 1) pinProgress = 1;
+
+        var n = growthCards.length;
+        var currentFloat = pinProgress * (n - 1);
+
+        for (i = 0; i < n; i++) {
+          var card = growthCards[i];
+          var d = currentFloat - i;
+          var baseRot = ((i * 47) % 13) - 6; // deterministic per-card tilt, -6..6deg
+          var ty, rot, scale, op, sat, z;
+
+          if (d <= 0) {
+            // only a few layers deep, each clearly separated — a clean
+            // stack, not a blur of overlapping fully-opaque photos
+            var back = Math.min(3, -d);
+            scale = 1 - back * 0.09;
+            ty = back * 24;
+            rot = baseRot * Math.min(1, back / 1.1);
+            sat = 1 - back * 0.12;
+            op = Math.max(0, 1 - back * 0.24);
+            z = 100 - i;
+          } else {
+            // exit fast (fully gone well before the next card is due) so
+            // the outgoing card never lingers on top of the one behind it
+            var t = Math.min(d / 0.35, 1);
+            ty = -t * 230;
+            rot = baseRot + t * (i % 2 === 0 ? -22 : 22);
+            scale = 1 - t * 0.22;
+            sat = Math.max(0.5, 1 - t * 0.35);
+            op = 1 - t;
+            z = 200 + i;
+          }
+
+          card.style.transform = "translate(-50%,-50%) translateY(" + ty.toFixed(2) + "px) rotate(" + rot.toFixed(2) + "deg) scale(" + scale.toFixed(3) + ")";
+          card.style.filter = "saturate(" + sat.toFixed(2) + ")";
+          card.style.opacity = op.toFixed(3);
+          card.style.zIndex = z;
+        }
+
+        if (growthCount) {
+          var shownIndex = Math.min(n - 1, Math.max(0, Math.round(currentFloat)));
+          if (shownIndex !== growthShownIndex) {
+            growthShownIndex = shownIndex;
+            growthCount.textContent = String(shownIndex + 1).padStart(2, "0") + " / " + n;
+          }
+        }
       }
 
       requestAnimationFrame(frame);
