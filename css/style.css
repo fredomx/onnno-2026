@@ -11,6 +11,7 @@
   --ink-soft:   #524b41;
   --ink-faint:  #8b8274;
   --blue:       #232c4d;
+  --blue-logo:  #0845A0;
   --olive-light:#b7bd8d;
   --line:       rgba(23,19,15,0.14);
   --line-strong:rgba(23,19,15,0.28);
@@ -526,20 +527,22 @@ a{ color: inherit; text-decoration: none; }
 
 /* ============================== THE OVEN ============================== */
 .oven{
-  background: var(--paper-3);
+  background: var(--blue-logo);
+  color: var(--paper);
   display:flex; flex-direction:column; align-items:center; text-align:center;
   padding-top: clamp(5rem, 10vw, 8rem);
   padding-bottom: clamp(5rem, 10vw, 8rem);
 }
+.oven .chapter__index{ color: rgba(243,237,225,.65); }
 .oven__figure{
   margin: clamp(2rem,5vw,3.5rem) 0; max-width: 300px; width: 60vw;
   box-shadow: 0 30px 60px -25px rgba(23,19,15,.35);
-  border: 8px solid var(--paper); outline: 1px solid var(--line-strong);
+  border: 8px solid var(--paper); outline: 1px solid rgba(243,237,225,.3);
 }
 .oven .chapter__title{ text-align:center; }
 .oven__text{ max-width: 42ch; display:flex; flex-direction:column; gap: 1rem; align-items:center; }
-.oven__text p{ margin:0; color: var(--ink-soft); }
-.oven__small{ font-size: .85rem; letter-spacing:.02em; color: var(--ink-faint); font-style:italic; font-family: var(--serif); }
+.oven__text p{ margin:0; color: rgba(243,237,225,.92); }
+.oven__small{ font-size: .85rem; letter-spacing:.02em; color: rgba(243,237,225,.65); font-style:italic; font-family: var(--serif); }
 
 /* ============================== INSPIRATION ============================== */
 .inspiration{ background: var(--ink); color: var(--paper); }
