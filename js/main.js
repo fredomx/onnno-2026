@@ -327,3 +327,119 @@
     }
   }
 })();
+
+/* ============================== BIRTHDAY ANNOUNCEMENT ==============================
+   Shows the 8th-anniversary invite automatically on the first few page loads
+   per visitor (tracked in localStorage), with a confetti burst on open.
+   Self-contained on purpose — safe to delete this whole block, its HTML in
+   index.html, and its CSS block, once the promotion is over. */
+(function () {
+  "use strict";
+
+  var modal = document.querySelector("[data-birthday-modal]");
+  if (!modal) return;
+
+  var STORAGE_KEY = "onnno-birthday-2026-views";
+  var MAX_AUTO_SHOWS = 3;
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var seen = 0;
+  try { seen = parseInt(localStorage.getItem(STORAGE_KEY), 10) || 0; } catch (e) {}
+  if (seen >= MAX_AUTO_SHOWS) return;
+
+  var confettiCanvas = modal.querySelector("[data-birthday-confetti]");
+  var confettiRaf = null;
+
+  function fireConfetti() {
+    if (reduceMotion || !confettiCanvas) return;
+    var ctx = confettiCanvas.getContext("2d");
+    if (!ctx) return;
+
+    function resize() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    resize();
+
+    var colors = ["#1A3560", "#e7c86a", "#c9673f", "#f3ede1", "#8fae7c"];
+    var count = window.innerWidth < 640 ? 80 : 150;
+    var pieces = [];
+    for (var i = 0; i < count; i++) {
+      pieces.push({
+        x: Math.random() * confettiCanvas.width,
+        y: -20 - Math.random() * confettiCanvas.height * 0.6,
+        w: 5 + Math.random() * 6,
+        h: 8 + Math.random() * 8,
+        color: colors[(Math.random() * colors.length) | 0],
+        speed: 2.2 + Math.random() * 2.6,
+        drift: (Math.random() - 0.5) * 2.2,
+        rotation: Math.random() * Math.PI,
+        rotSpeed: (Math.random() - 0.5) * 0.22
+      });
+    }
+
+    var duration = 3400;
+    var fadeStart = duration - 700;
+    var start = null;
+
+    function frame(now) {
+      if (start === null) start = now;
+      var elapsed = now - start;
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      var opacity = elapsed > fadeStart ? Math.max(0, 1 - (elapsed - fadeStart) / (duration - fadeStart)) : 1;
+      pieces.forEach(function (p) {
+        p.y += p.speed;
+        p.x += p.drift;
+        p.rotation += p.rotSpeed;
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+      if (elapsed < duration) {
+        confettiRaf = requestAnimationFrame(frame);
+      } else {
+        ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        confettiRaf = null;
+      }
+    }
+    if (confettiRaf) cancelAnimationFrame(confettiRaf);
+    confettiRaf = requestAnimationFrame(frame);
+  }
+
+  function openModal() {
+    modal.removeAttribute("aria-hidden");
+    requestAnimationFrame(function () {
+      modal.classList.add("is-open");
+    });
+    document.body.style.overflow = "hidden";
+    fireConfetti();
+  }
+
+  function closeModal() {
+    modal.classList.remove("is-open");
+    document.body.style.overflow = "";
+    if (confettiRaf) { cancelAnimationFrame(confettiRaf); confettiRaf = null; }
+    setTimeout(function () { modal.setAttribute("aria-hidden", "true"); }, 500);
+  }
+
+  modal.querySelectorAll("[data-birthday-close]").forEach(function (el) {
+    el.addEventListener("click", closeModal);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && modal.classList.contains("is-open")) closeModal();
+  });
+  var replayBtn = modal.querySelector("[data-birthday-replay]");
+  if (replayBtn) {
+    replayBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      fireConfetti();
+    });
+  }
+
+  try { localStorage.setItem(STORAGE_KEY, String(seen + 1)); } catch (e) {}
+  setTimeout(openModal, 1000);
+})();

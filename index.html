@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="css/style.css?v=58">
+<link rel="stylesheet" href="css/style.css?v=59">
 </head>
 <body>
 
@@ -316,6 +316,24 @@
   </div>
 </footer>
 
-<script src="js/main.js?v=58"></script>
+<!-- ============ BIRTHDAY ANNOUNCEMENT ============ -->
+<div class="birthday" data-birthday-modal aria-hidden="true">
+  <div class="birthday__backdrop" data-birthday-close></div>
+  <canvas class="birthday__confetti" data-birthday-confetti aria-hidden="true"></canvas>
+  <div class="birthday__card" role="dialog" aria-modal="true" aria-labelledby="birthday-title">
+    <button type="button" class="birthday__close" data-birthday-close aria-label="Cerrar">
+      <span aria-hidden="true">&times;</span>
+    </button>
+    <button type="button" class="birthday__media" data-birthday-replay aria-label="Repetir confeti">
+      <img src="assets/img/birthday-announcement.jpg" alt="Invitación: 8 años de Onnno, jueves 10 de septiembre, menú especial, en Mártires de Tacubaya 308.">
+    </button>
+    <div class="birthday__text">
+      <h2 id="birthday-title" class="birthday__title">¡Feliz cumpleaños, Onnno!</h2>
+      <p class="birthday__sub">8 años — jueves 10 de septiembre · menú especial · Mártires de Tacubaya 308</p>
+    </div>
+  </div>
+</div>
+
+<script src="js/main.js?v=59"></script>
 </body>
 </html>
