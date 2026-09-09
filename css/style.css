@@ -19,6 +19,7 @@
   --sans:  'Archivo', 'Helvetica Neue', Arial, sans-serif;
 
   --edge: clamp(1.25rem, 4vw, 3.5rem);
+  --nav-h: 113px;
 
   color-scheme: light;
 }
@@ -92,8 +93,9 @@ a{ color: inherit; text-decoration: none; }
   display:flex; align-items:center; justify-content:space-between;
   padding: 1.4rem var(--edge);
   color: var(--ink);
+  background: transparent;
   font-family: var(--sans);
-  transition: color .4s ease;
+  transition: color .4s ease, background-color .4s ease, box-shadow .4s ease, padding .4s ease;
 }
 .site-nav::before{
   content:''; position:fixed; top:0; left:0; right:0; height: 170px;
@@ -102,13 +104,23 @@ a{ color: inherit; text-decoration: none; }
 }
 .site-nav--overlay{ color: var(--paper); }
 .site-nav--overlay::before{ opacity: 1; }
-.site-nav__mark{
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 500;
-  font-size: 1.15rem;
-  letter-spacing: .01em;
+
+/* once the hero has scrolled past (Introducción onward), the nav gets a
+   solid ground so it reads clearly over any section, dark ones included —
+   this wins over --overlay's light text since it's declared after it. */
+.site-nav--solid{
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 1px 0 var(--line);
+  padding-top: .6rem;
+  padding-bottom: .6rem;
 }
+.site-nav--solid::before{ opacity: 0 !important; }
+.site-nav--solid .site-nav__meta,
+.site-nav--solid .site-nav__social{ display:none; }
+.site-nav__mark{ display:inline-flex; align-items:center; }
+.site-nav__logo{ height: 68px; width: auto; transition: height .4s ease; }
+.site-nav--solid .site-nav__logo{ height: 28px; }
 .site-nav__meta{
   font-size: .68rem;
   letter-spacing: .12em;
@@ -117,12 +129,18 @@ a{ color: inherit; text-decoration: none; }
 }
 @media (max-width: 720px){ .site-nav__meta{ display:none; } }
 
+.site-nav__right{ display:flex; flex-direction:column; align-items:flex-end; gap:1rem; }
 .site-nav__toggle{
   display:flex; align-items:center; gap:.6rem;
   background:none; border:0; color: inherit; cursor:pointer;
   font-family: var(--sans); font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
   padding: .4rem 0;
 }
+.site-nav__social{
+  font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+  color: inherit; opacity:.85; transition: opacity .3s ease;
+}
+.site-nav__social:hover{ opacity:.6; }
 .site-nav__toggle-icon{ display:inline-flex; flex-direction:column; gap:4px; width:20px; }
 .site-nav__toggle-icon i{ display:block; height:1px; background: currentColor; transition: transform .4s ease, opacity .4s ease; }
 [aria-expanded="true"] .site-nav__toggle-icon i:first-child{ transform: translateY(2.5px) rotate(45deg); }
@@ -132,7 +150,9 @@ a{ color: inherit; text-decoration: none; }
   position: fixed; inset:0; z-index: 480;
   background: var(--ink); color: var(--paper);
   display:flex; flex-direction:column; justify-content:center;
-  padding: 6rem var(--edge) 3rem;
+  justify-content: safe center;
+  overflow-y: auto;
+  padding: calc(var(--nav-h) + 2rem) var(--edge) 3rem;
   transform: translateY(-100%);
   transition: transform .7s cubic-bezier(.16,.8,.24,1);
 }
@@ -158,6 +178,24 @@ a{ color: inherit; text-decoration: none; }
   font-size: .72rem; letter-spacing:.08em; text-transform:uppercase; color: rgba(243,237,225,0.6);
 }
 .site-index__foot a{ color: var(--paper); border-bottom:1px solid rgba(243,237,225,.4); }
+.site-index__address{ font-size:.6rem; opacity:.55; }
+
+/* when the nav is already showing its solid white ground (past the hero),
+   opening the índice keeps that same paper background instead of the
+   usual dark one, so the panel doesn't feel like a different surface. */
+.site-nav--solid ~ .site-index{ background: var(--paper); color: var(--ink); }
+.site-nav--solid ~ .site-index .site-index__list li{ border-top-color: rgba(23,19,15,.14); }
+.site-nav--solid ~ .site-index .site-index__list li:last-child{ border-bottom-color: rgba(23,19,15,.14); }
+.site-nav--solid ~ .site-index .site-index__foot{ color: rgba(23,19,15,.6); }
+.site-nav--solid ~ .site-index .site-index__foot a{ color: var(--ink); border-bottom-color: rgba(23,19,15,.4); }
+
+/* on shorter viewports, nine chapters + footer don't fit under the nav's
+   real height without scrolling — tighten row rhythm so it does. */
+@media (max-height: 1300px){
+  .site-index{ padding: calc(var(--nav-h) + .75rem) var(--edge) 1.25rem; }
+  .site-index__list a{ padding: .4rem 0; font-size: clamp(1.3rem, 4vw, 2.1rem); }
+  .site-index__foot{ margin-top: 1rem; }
+}
 
 /* ============================== HERO ============================== */
 .hero{
@@ -519,10 +557,8 @@ a{ color: inherit; text-decoration: none; }
 
 /* ============================== VISIT ============================== */
 .visit{ background: var(--paper); padding: clamp(4.5rem,10vw,8rem) var(--edge); text-align:center; }
-.visit__word{
-  font-family: var(--serif); font-style:italic; font-weight:500; margin: 0 0 clamp(3rem,7vw,5rem);
-  font-size: clamp(3.5rem, 12vw, 8rem); line-height:.9;
-}
+.visit__word{ margin: 0 0 clamp(3rem,7vw,5rem); line-height:0; }
+.visit__logo{ display:inline-block; height: clamp(3rem, 11vw, 7rem); width: auto; }
 .visit__grid{
   display:grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;
   max-width: 60rem; margin: 0 auto; text-align:left;

@@ -14,6 +14,19 @@
     }
   }
 
+  /* ---------- nav height sync ----------
+     keeps the fullscreen index panel's top clearance in step with the
+     nav bar's real height (e.g. logo size changes) instead of a hardcoded
+     guess that silently goes stale and overlaps. */
+  var navBar = document.querySelector(".site-nav");
+  if (navBar) {
+    var syncNavHeight = function () {
+      document.documentElement.style.setProperty("--nav-h", navBar.offsetHeight + "px");
+    };
+    syncNavHeight();
+    window.addEventListener("resize", syncNavHeight);
+  }
+
   /* ---------- nav overlay ---------- */
   var toggle = document.querySelector("[data-nav-toggle]");
   var panel = document.querySelector("[data-nav-panel]");
@@ -258,5 +271,23 @@
       { threshold: 0, rootMargin: "0px 0px -94% 0px" }
     );
     darkSections.forEach(function (el) { navIo.observe(el); });
+  }
+
+  /* ---------- nav gains a solid background from Introducción onward ---------- */
+  var heroSection = document.querySelector("#hero");
+  if (nav && heroSection && "IntersectionObserver" in window) {
+    var solidIo = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          nav.classList.toggle("site-nav--solid", !entry.isIntersecting);
+        });
+        // the solid state animates to a different (shorter) nav height over
+        // .4s, so wait for that transition to land before re-measuring —
+        // reading offsetHeight right away would just capture the mid-animation value.
+        if (typeof syncNavHeight === "function") setTimeout(syncNavHeight, 450);
+      },
+      { threshold: 0, rootMargin: "0px 0px -94% 0px" }
+    );
+    solidIo.observe(heroSection);
   }
 })();

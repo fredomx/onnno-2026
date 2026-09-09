@@ -7,13 +7,21 @@
 <meta name="description" content="Onnno. Restaurante, panadería y mesa compartida en Oaxaca de Juárez. Desde 2018, un lugar para desayunar, comer, tomar café y volver.">
 <meta name="theme-color" content="#f3ede1">
 
+<!-- critical, render-blocking-independent: the fullscreen index panel must
+     never be visible before css/style.css finishes loading. On a slow
+     connection (or with the Google Fonts request ahead of it in <head>),
+     the external stylesheet can be delayed enough that this fixed,
+     full-screen nav would otherwise flash open at the top of the page for
+     a frame before sliding shut once the real CSS applies. -->
+<style>.site-index{transform:translateY(-100vh)}</style>
+
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3ede2'/%3E%3Ctext x='50' y='68' font-size='62' font-family='Georgia,serif' text-anchor='middle' fill='%23191510'%3EO%3C/text%3E%3C/svg%3E">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
 
@@ -21,12 +29,17 @@
 
 <!-- ============ NAV ============ -->
 <header class="site-nav" data-nav>
-  <a href="#top" class="site-nav__mark">Onnno</a>
-  <div class="site-nav__meta">Oaxaca de Juárez — Desde 2018</div>
-  <button type="button" class="site-nav__toggle" data-nav-toggle aria-expanded="false" aria-controls="site-index">
-    <span>Índice</span>
-    <span class="site-nav__toggle-icon"><i></i><i></i></span>
-  </button>
+  <a href="#top" class="site-nav__mark">
+    <img src="assets/img/logo.png" alt="Onnno" class="site-nav__logo" width="35" height="68">
+  </a>
+  <div class="site-nav__meta">Desde 2018</div>
+  <div class="site-nav__right">
+    <button type="button" class="site-nav__toggle" data-nav-toggle aria-expanded="false" aria-controls="site-index">
+      <span>Índice</span>
+      <span class="site-nav__toggle-icon"><i></i><i></i></span>
+    </button>
+    <a href="https://www.instagram.com/onnno.mx/" target="_blank" rel="noopener" class="site-nav__social">Instagram ↗︎</a>
+  </div>
 </header>
 
 <nav class="site-index" id="site-index" data-nav-panel>
@@ -42,8 +55,8 @@
     <li><a href="#visit"><span class="n">09</span>Visita</a></li>
   </ol>
   <div class="site-index__foot">
-    <span>Mártires de Tacubaya 308‑C, Oaxaca de Juárez</span>
-    <a href="https://www.instagram.com/onnno.mx/" target="_blank" rel="noopener">Instagram ↗</a>
+    <span class="site-index__address">Mártires de Tacubaya 308‑C, Oaxaca de Juárez</span>
+    <span class="site-index__address">Morelos 1201, Oaxaca de Juárez</span>
   </div>
 </nav>
 
@@ -62,11 +75,11 @@
     </div>
 
     <div class="hero__content">
-      <p class="hero__kicker reveal">Oaxaca de Juárez, México</p>
-      <h1 class="hero__word reveal">
+      <p class="hero__kicker reveal">Oaxaca, Mexico</p>
+      <h1 class="hero__word reveal" data-kinetic>
         <span class="reveal-mask"><span class="reveal-line">Onnno</span></span>
       </h1>
-      <p class="hero__descriptor reveal">Oaxaca <span class="slash">/</span> Restaurante <span class="slash">/</span> Panadería <span class="slash">/</span> Mesa <span class="slash">/</span> 2018—2026</p>
+      <p class="hero__descriptor reveal">Restaurante <span class="slash">/</span> Panadería <span class="slash">/</span> 2018—2026</p>
     </div>
 
     <div class="hero__scroll reveal" aria-hidden="true">
@@ -320,7 +333,9 @@
   <!-- ============ VISIT / CONTACT ============ -->
   <section class="visit" id="visit">
     <span class="chapter__index reveal">09 — Visita</span>
-    <h2 class="visit__word reveal" data-kinetic>Onnno</h2>
+    <h2 class="visit__word reveal">
+      <img src="assets/img/logo.png" alt="Onnno" class="visit__logo" width="58" height="112">
+    </h2>
     <div class="visit__grid">
       <div class="reveal">
         <span class="visit__label">Dirección</span>
@@ -332,7 +347,7 @@
       </div>
       <div class="reveal">
         <span class="visit__label">Encuéntranos</span>
-        <p><a href="https://www.instagram.com/onnno.mx/" target="_blank" rel="noopener">@onnno.mx ↗</a></p>
+        <p><a href="https://www.instagram.com/onnno.mx/" target="_blank" rel="noopener">@onnno.mx ↗︎</a></p>
       </div>
     </div>
   </section>
@@ -349,6 +364,6 @@
   </div>
 </footer>
 
-<script src="js/main.js"></script>
+<script src="js/main.js?v=18"></script>
 </body>
 </html>
