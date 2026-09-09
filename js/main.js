@@ -78,12 +78,28 @@
   });
   var parallaxEls = Array.prototype.slice.call(document.querySelectorAll("[data-parallax]"));
 
+  // kinetic headlines settle at their own authored weight; opsz always
+  // finishes at 144 (Fraunces' full display cut) regardless of font-size.
+  function kineticEndWeight(el) {
+    return parseFloat(getComputedStyle(el).fontWeight) || 500;
+  }
+
   if (reduceMotion) {
-    heroReveals.concat(revealEls).forEach(function (el) {
+    heroReveals.forEach(function (el) {
+      el.classList.add("is-visible");
       el.style.opacity = 1;
       el.style.transform = "none";
       var line = el.querySelector(".reveal-line");
       if (line) line.style.transform = "none";
+    });
+    revealEls.forEach(function (el) {
+      el.style.opacity = 1;
+      el.style.transform = "none";
+      var line = el.querySelector(".reveal-line");
+      if (line) line.style.transform = "none";
+      if (el.hasAttribute("data-kinetic")) {
+        el.style.fontVariationSettings = "'opsz' 144, 'wght' " + kineticEndWeight(el);
+      }
     });
   } else {
     heroReveals.forEach(function (el, i) {
@@ -96,12 +112,17 @@
     });
 
     var revealData = revealEls.map(function (el) {
+      var kinetic = el.hasAttribute("data-kinetic");
+      var endWeight = kinetic ? kineticEndWeight(el) : 0;
       return {
         el: el,
         line: el.querySelector(".reveal-line"),
         offset: (parseFloat(el.style.getPropertyValue("--d")) || 0) * 260, // seconds → px of extra scroll needed
         current: 0,
-        target: 0
+        target: 0,
+        kinetic: kinetic,
+        startWeight: Math.max(100, endWeight - 100),
+        endWeight: endWeight
       };
     });
     // reused every frame instead of allocating a fresh array each tick
@@ -140,6 +161,11 @@
         d.el.style.opacity = p;
         d.el.style.transform = "translateY(" + ((1 - p) * 28).toFixed(2) + "px)";
         if (d.line) d.line.style.transform = "translateY(" + ((1 - p) * 115).toFixed(2) + "%)";
+        if (d.kinetic) {
+          var opsz = (40 + p * (144 - 40)).toFixed(1);
+          var wght = (d.startWeight + p * (d.endWeight - d.startWeight)).toFixed(1);
+          d.el.style.fontVariationSettings = "'opsz' " + opsz + ", 'wght' " + wght;
+        }
       }
 
       for (j = 0; j < parallaxEls.length; j++) {
