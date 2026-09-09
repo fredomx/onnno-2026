@@ -293,12 +293,30 @@
 
   /* ---------- people hero: photos drift past each other while scrolling ----------
      each photo moves vertically at its own data-depth speed as the section
-     scrolls through — same idea on desktop and mobile. Runs only while the
-     section is actually in view (IntersectionObserver gates the rAF loop). */
+     scrolls through — same on desktop and mobile. On top of that, devices
+     with a real mouse (fine pointer + hover) also get the photos nudging
+     softly toward the cursor — both offsets are combined in the same
+     per-frame transform so they never fight over the property. Runs only
+     while the section is actually in view (IntersectionObserver-gated). */
   var peopleHero = document.querySelector(".people__hero");
+  var hasFinePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   if (peopleHero && !reduceMotion) {
     var heroImgs = Array.prototype.slice.call(peopleHero.querySelectorAll(".people__hero-img"));
     var heroDriftActive = false;
+    var pointerNormX = 0;
+    var pointerNormY = 0;
+
+    if (hasFinePointer) {
+      peopleHero.addEventListener("pointermove", function (e) {
+        var rect = peopleHero.getBoundingClientRect();
+        pointerNormX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+        pointerNormY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+      });
+      peopleHero.addEventListener("pointerleave", function () {
+        pointerNormX = 0;
+        pointerNormY = 0;
+      });
+    }
 
     function heroDriftFrame() {
       if (!heroDriftActive) return;
@@ -308,7 +326,10 @@
       if (progress < 0) progress = 0; else if (progress > 1) progress = 1;
       heroImgs.forEach(function (img) {
         var depth = parseFloat(img.getAttribute("data-depth")) || 40;
-        img.style.transform = "translateY(" + ((0.5 - progress) * depth * 2).toFixed(1) + "px)";
+        var scrollY = (0.5 - progress) * depth * 2;
+        var hoverX = hasFinePointer ? pointerNormX * depth * 0.4 : 0;
+        var hoverY = hasFinePointer ? pointerNormY * depth * 0.4 : 0;
+        img.style.transform = "translate(" + hoverX.toFixed(1) + "px, " + (scrollY + hoverY).toFixed(1) + "px)";
       });
       requestAnimationFrame(heroDriftFrame);
     }
@@ -329,23 +350,17 @@
 })();
 
 /* ============================== BIRTHDAY ANNOUNCEMENT ==============================
-   Shows the 8th-anniversary invite automatically on the first few page loads
-   per visitor (tracked in localStorage), with a confetti burst on open.
-   Self-contained on purpose — safe to delete this whole block, its HTML in
-   index.html, and its CSS block, once the promotion is over. */
+   Shows the 8th-anniversary invite automatically on every page load, with a
+   confetti burst on open. Self-contained on purpose — safe to delete this
+   whole block, its HTML in index.html, and its CSS block, once the
+   promotion is over. */
 (function () {
   "use strict";
 
   var modal = document.querySelector("[data-birthday-modal]");
   if (!modal) return;
 
-  var STORAGE_KEY = "onnno-birthday-2026-views";
-  var MAX_AUTO_SHOWS = 3;
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  var seen = 0;
-  try { seen = parseInt(localStorage.getItem(STORAGE_KEY), 10) || 0; } catch (e) {}
-  if (seen >= MAX_AUTO_SHOWS) return;
 
   var confettiCanvas = modal.querySelector("[data-birthday-confetti]");
   var confettiRaf = null;
@@ -440,6 +455,5 @@
     });
   }
 
-  try { localStorage.setItem(STORAGE_KEY, String(seen + 1)); } catch (e) {}
   setTimeout(openModal, 1000);
 })();
