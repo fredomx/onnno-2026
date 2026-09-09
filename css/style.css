@@ -505,6 +505,15 @@ a{ color: inherit; text-decoration: none; }
   font-family: var(--sans); font-size: .72rem; letter-spacing:.16em;
   color: var(--ink-faint); pointer-events:none;
 }
+/* the year sits beside the pinned photo, not on top of it — same corner
+   treatment as the counter, mirrored to the opposite edge, and it swaps
+   the instant the deck settles on a new card (see data-growth-year in JS) */
+.growth__year{
+  position: absolute; left: var(--edge); bottom: clamp(1.3rem, 3.6vw, 2.3rem);
+  font-family: var(--serif); font-style: italic; font-weight: 500;
+  font-size: clamp(1.4rem, 3vw, 2rem); color: var(--ink-faint);
+  pointer-events: none;
+}
 
 @media (prefers-reduced-motion: reduce){
   .growth__pin{ height:auto; margin: 0; }
@@ -521,6 +530,7 @@ a{ color: inherit; text-decoration: none; }
     scroll-snap-align:start; transform:none !important; filter:none !important; opacity:1 !important;
   }
   .growth__count{ display:none; }
+  .growth__year{ display:none; }
 }
 
 /* ============================== THE OVEN ============================== */

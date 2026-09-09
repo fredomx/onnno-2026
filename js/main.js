@@ -141,6 +141,7 @@
     var growthPin = document.querySelector("[data-growth-pin]");
     var growthTrack = document.querySelector("[data-growth-track]");
     var growthCount = document.querySelector("[data-growth-count]");
+    var growthYear = document.querySelector("[data-growth-year]");
     var growthCards = growthTrack ? Array.prototype.slice.call(growthTrack.children) : [];
     var growthShownIndex = -1;
     var GROWTH_SCROLL_PER_CARD = 0.55; // viewport-heights of scroll per card change
@@ -240,12 +241,11 @@
           card.style.zIndex = z;
         }
 
-        if (growthCount) {
-          var shownIndex = Math.min(n - 1, Math.max(0, Math.round(currentFloat)));
-          if (shownIndex !== growthShownIndex) {
-            growthShownIndex = shownIndex;
-            growthCount.textContent = String(shownIndex + 1).padStart(2, "0") + " / " + n;
-          }
+        var shownIndex = Math.min(n - 1, Math.max(0, Math.round(currentFloat)));
+        if (shownIndex !== growthShownIndex) {
+          growthShownIndex = shownIndex;
+          if (growthCount) growthCount.textContent = String(shownIndex + 1).padStart(2, "0") + " / " + n;
+          if (growthYear) growthYear.textContent = growthCards[shownIndex].getAttribute("data-year") || "";
         }
       }
 
