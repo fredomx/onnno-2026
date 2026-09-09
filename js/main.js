@@ -290,4 +290,40 @@
     );
     solidIo.observe(heroSection);
   }
+
+  /* ---------- people hero: photos drift past each other while scrolling ----------
+     each photo moves vertically at its own data-depth speed as the section
+     scrolls through — same idea on desktop and mobile. Runs only while the
+     section is actually in view (IntersectionObserver gates the rAF loop). */
+  var peopleHero = document.querySelector(".people__hero");
+  if (peopleHero && !reduceMotion) {
+    var heroImgs = Array.prototype.slice.call(peopleHero.querySelectorAll(".people__hero-img"));
+    var heroDriftActive = false;
+
+    function heroDriftFrame() {
+      if (!heroDriftActive) return;
+      var rect = peopleHero.getBoundingClientRect();
+      var vh = window.innerHeight;
+      var progress = (vh - rect.top) / (vh + rect.height);
+      if (progress < 0) progress = 0; else if (progress > 1) progress = 1;
+      heroImgs.forEach(function (img) {
+        var depth = parseFloat(img.getAttribute("data-depth")) || 40;
+        img.style.transform = "translateY(" + ((0.5 - progress) * depth * 2).toFixed(1) + "px)";
+      });
+      requestAnimationFrame(heroDriftFrame);
+    }
+
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting && !heroDriftActive) {
+            heroDriftActive = true;
+            requestAnimationFrame(heroDriftFrame);
+          } else if (!entry.isIntersecting) {
+            heroDriftActive = false;
+          }
+        });
+      }, { threshold: 0 }).observe(peopleHero);
+    }
+  }
 })();

@@ -399,32 +399,63 @@ a{ color: inherit; text-decoration: none; }
 
 /* ============================== PEOPLE & CRAFT ============================== */
 .people{ background: var(--paper-2); }
-.people__grid{
-  display:grid; grid-template-columns: repeat(12, 1fr); gap: clamp(1rem, 2.4vw, 1.8rem);
-  align-items: start;
-  margin-bottom: clamp(2.5rem, 6vw, 4rem);
-}
-.people__img{ margin:0; grid-column: span 7; overflow:hidden; aspect-ratio: 4/5; }
-.people__img img{ width:100%; height:100%; object-fit:cover; }
-.people__img--tall{ grid-column: 8 / 13; align-self: end; aspect-ratio: 3/4; }
-.people__text{
-  grid-column: 8 / 13; align-self:center;
-  font-size: 1rem; color: var(--ink-soft);
-}
-.people__text strong{ color: var(--ink); }
-.people__text--alt{ grid-column: 1 / 7; align-self: end; padding-bottom: .4rem; }
-.people__text p{ margin: 0 0 1rem; }
-.people__text p:last-child{ margin-bottom:0; }
 
+/* a scattered photo collage around the big display title, echoing an
+   architecture studio's "All Work (28)" teaser moment */
+.people__hero{
+  position:relative; height: clamp(560px, 58vw, 820px);
+  margin: clamp(1rem, 3vw, 1.5rem) 0 clamp(2.5rem, 6vw, 4rem);
+  display:flex; align-items:center; justify-content:center;
+}
+.people__hero-title{
+  position:relative; z-index:2; margin:0; text-align:center; font-size: clamp(3rem, 8vw, 6.5rem);
+  display:inline-block; background: var(--paper-2); padding: 0 .15em;
+}
+.people__hero-img{
+  position:absolute; z-index:1; object-fit:cover;
+  box-shadow: 0 30px 60px -28px rgba(23,19,15,.4);
+  transition: transform .6s cubic-bezier(.16,.8,.24,1);
+}
+.people__hero-img--a{ width:16%; aspect-ratio:3/4; top:3%; left:4%; }
+.people__hero-img--b{ width:18%; aspect-ratio:4/5; bottom:4%; right:6%; }
+.people__hero-img--c{ width:11%; aspect-ratio:2/3; top:5%; right:16%; }
+.people__hero-img--d{ width:10%; aspect-ratio:3/4; bottom:10%; left:18%; }
+.people__hero-img--e{ width:14%; aspect-ratio:3/4; top:34%; right:2%; }
+.people__hero-img--f{ width:12%; aspect-ratio:2/3; bottom:30%; left:1%; }
+
+/* mobile keeps all six photos — same experience, just rescaled into two
+   clusters (top / bottom) with the middle band clear for the title, since
+   at this width the title spans nearly edge to edge. No hover here (no
+   real cursor on touch); instead the photos drift gently bottom-to-top
+   as the section scrolls through, driven from JS via data-depth. */
+@media (max-width: 640px){
+  .people__hero{ height: clamp(560px, 150vw, 640px); }
+  .people__hero-title{ font-size: clamp(2.3rem, 11vw, 3rem); }
+  .people__hero-img{ box-shadow: 0 16px 34px -18px rgba(23,19,15,.4); }
+  .people__hero-img--a{ width:30%; top:2%; left:3%; bottom:auto; right:auto; }
+  .people__hero-img--c{ width:22%; top:3%; right:5%; left:auto; bottom:auto; }
+  .people__hero-img--e{ width:24%; top:20%; left:36%; right:auto; bottom:auto; }
+  .people__hero-img--d{ width:22%; bottom:14%; left:6%; top:auto; right:auto; }
+  .people__hero-img--f{ width:20%; bottom:2%; left:34%; top:auto; right:auto; }
+  .people__hero-img--b{ width:34%; bottom:2%; right:4%; top:auto; left:auto; }
+}
+
+/* text now reads as one simple, centered flow beneath the hero title
+   instead of separate list / caption / statement blocks */
+.people__caption{
+  margin: clamp(1.5rem, 4vw, 2.5rem) auto 0; max-width: 56ch; text-align:center;
+  font-size: 1.02rem; color: var(--ink-soft); line-height:1.55;
+}
 .people__statement{
-  font-family: var(--serif); font-style:italic; font-size: clamp(1.3rem, 2.6vw, 2rem);
-  max-width: 50ch; line-height:1.35; margin:0;
+  font-family: var(--serif); font-style:italic; color: var(--ink-soft);
+  line-height:1.45; margin: 0 auto;
+}
+.people__statement--lead{
+  margin-top: clamp(1.5rem, 4vw, 2.5rem);
+  font-size: clamp(1.3rem, 2.6vw, 2rem); color: var(--ink);
+  max-width: 42ch; text-align:center; line-height:1.35;
 }
 .people__statement em{ color: var(--blue); }
-
-@media (max-width: 860px){
-  .people__img, .people__img--tall, .people__text, .people__text--alt{ grid-column: 1 / -1; }
-}
 
 /* ============================== GROWTH ============================== */
 .growth{ background: var(--paper); }
