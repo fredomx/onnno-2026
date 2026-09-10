@@ -500,6 +500,15 @@ a{ color: inherit; text-decoration: none; }
   box-shadow: 0 30px 70px -30px rgba(23,19,15,.45);
   will-change: transform, filter, opacity;
 }
+/* the closing beat: no photo, just "2026" growing from the corner
+   year-label's spot into a big centered word — sizing/position for this
+   one card are driven entirely from JS */
+.growth__card--text{
+  width: auto; aspect-ratio: auto; background: none; box-shadow: none;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-style: italic; font-weight: 500;
+  font-size: 26px; color: var(--ink); white-space: nowrap;
+}
 .growth__count{
   position: absolute; right: var(--edge); bottom: clamp(1.5rem, 4vw, 2.5rem);
   font-family: var(--sans); font-size: .72rem; letter-spacing:.16em;
@@ -529,6 +538,7 @@ a{ color: inherit; text-decoration: none; }
     position:static; flex:0 0 auto;
     scroll-snap-align:start; transform:none !important; filter:none !important; opacity:1 !important;
   }
+  .growth__card--text{ font-size: clamp(2.5rem, 8vw, 4rem); }
   .growth__count{ display:none; }
   .growth__year{ display:none; }
 }

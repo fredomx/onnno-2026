@@ -1,3 +1,21 @@
+/* shared body-scroll lock, refcounted so the nav index panel and the
+   birthday modal (separate IIFEs, opened independently) can each hold a
+   lock without one's close clobbering the other's still-open lock */
+function lockBodyScroll(){
+  var n = (parseInt(document.body.getAttribute("data-scroll-lock"), 10) || 0) + 1;
+  document.body.setAttribute("data-scroll-lock", String(n));
+  document.body.style.overflow = "hidden";
+}
+function unlockBodyScroll(){
+  var n = (parseInt(document.body.getAttribute("data-scroll-lock"), 10) || 0) - 1;
+  if (n > 0) {
+    document.body.setAttribute("data-scroll-lock", String(n));
+  } else {
+    document.body.removeAttribute("data-scroll-lock");
+    document.body.style.overflow = "";
+  }
+}
+
 (function(){
   "use strict";
 
@@ -35,14 +53,14 @@
     toggle.addEventListener("click", function () {
       var open = panel.classList.toggle("is-open");
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
-      document.body.style.overflow = open ? "hidden" : "";
+      if (open) lockBodyScroll(); else unlockBodyScroll();
     });
 
     panel.querySelectorAll("a").forEach(function (link) {
       link.addEventListener("click", function () {
+        if (panel.classList.contains("is-open")) unlockBodyScroll();
         panel.classList.remove("is-open");
         toggle.setAttribute("aria-expanded", "false");
-        document.body.style.overflow = "";
       });
     });
   }
@@ -145,9 +163,17 @@
     var growthCards = growthTrack ? Array.prototype.slice.call(growthTrack.children) : [];
     var growthShownIndex = -1;
     var GROWTH_SCROLL_PER_CARD = 0.55; // viewport-heights of scroll per card change
-    if (growthPin && growthCards.length) {
-      growthPin.style.height = (window.innerHeight * (1 + (growthCards.length - 1) * GROWTH_SCROLL_PER_CARD)) + "px";
+    function syncGrowthPinHeight() {
+      if (growthPin && growthCards.length) {
+        growthPin.style.height = (window.innerHeight * (1 + (growthCards.length - 1) * GROWTH_SCROLL_PER_CARD)) + "px";
+      }
     }
+    syncGrowthPinHeight();
+    // recompute on resize (window resize, orientation change, mobile chrome
+    // collapsing) — otherwise the runway height stays pinned to whatever
+    // window.innerHeight was at page load and the scroll-to-card mapping
+    // drifts out of sync with the current viewport.
+    window.addEventListener("resize", syncGrowthPinHeight);
 
     function frame() {
       var vh = window.innerHeight;
@@ -213,6 +239,37 @@
           var baseRot = ((i * 47) % 13) - 6; // deterministic per-card tilt, -6..6deg
           var ty, rot, scale, op, sat, z;
 
+          if (card.classList.contains("growth__card--text")) {
+            // the closing beat: this card has no photo — it grows from the
+            // corner where the small year label sits into a big centered
+            // word, tracking the exact same approach progress ("back") the
+            // photos use, just mapped to position + font-size instead.
+            var approach = Math.max(0, Math.min(1, 1 + d));
+            var ease = approach * approach * (3 - 2 * approach); // smoothstep
+            var cornerX = -(window.innerWidth / 2 - 24);
+            var cornerY = (vh / 2 - 22);
+            var bigPx = Math.min(window.innerWidth * 0.28, 260);
+            var tx = cornerX * (1 - ease);
+            var tyText = cornerY * (1 - ease);
+            var fontPx = 26 + (bigPx - 26) * ease;
+            card.style.transform = "translate(-50%,-50%) translate(" + tx.toFixed(1) + "px," + tyText.toFixed(1) + "px)";
+            card.style.fontSize = fontPx.toFixed(1) + "px";
+            card.style.filter = "none";
+            // stays invisible until we're actually approaching it — without
+            // this it sits fully opaque in the corner for the entire scroll
+            // through every photo before it, doubling up with the year label
+            card.style.opacity = ease.toFixed(3);
+            // always above the photo stack (including an exiting photo,
+            // z 200+i) — this card only has one direction to approach
+            // from, unlike photos, which peek both waiting and exiting
+            card.style.zIndex = 300;
+            // fade the small corner label out in the exact same frame,
+            // continuously, so it can never linger fully visible next to
+            // the big word it just grew out of
+            if (growthYear) growthYear.style.opacity = (1 - ease).toFixed(3);
+            continue;
+          }
+
           if (d <= 0) {
             // only a few layers deep, each clearly separated — a clean
             // stack, not a blur of overlapping fully-opaque photos
@@ -245,7 +302,15 @@
         if (shownIndex !== growthShownIndex) {
           growthShownIndex = shownIndex;
           if (growthCount) growthCount.textContent = String(shownIndex + 1).padStart(2, "0") + " / " + n;
-          if (growthYear) growthYear.textContent = growthCards[shownIndex].getAttribute("data-year") || "";
+          // opacity for the text-card approach is driven continuously,
+          // every frame, in the loop above. The label itself is left
+          // showing the last real photo's year while it fades out — it
+          // should never actually say "2026" too, or it reads as a
+          // second, duplicate copy of the big word growing beside it.
+          var shownCard = growthCards[shownIndex];
+          if (growthYear && !shownCard.classList.contains("growth__card--text")) {
+            growthYear.textContent = shownCard.getAttribute("data-year") || "";
+          }
         }
       }
 
@@ -430,13 +495,14 @@
     requestAnimationFrame(function () {
       modal.classList.add("is-open");
     });
-    document.body.style.overflow = "hidden";
+    lockBodyScroll();
     fireConfetti();
   }
 
   function closeModal() {
+    if (!modal.classList.contains("is-open")) return;
     modal.classList.remove("is-open");
-    document.body.style.overflow = "";
+    unlockBodyScroll();
     if (confettiRaf) { cancelAnimationFrame(confettiRaf); confettiRaf = null; }
     setTimeout(function () { modal.setAttribute("aria-hidden", "true"); }, 500);
   }
