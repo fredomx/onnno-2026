@@ -15,10 +15,10 @@
   "heroTagline": "Restaurante / Panadería / 2018—2026",
   "banner": {
     "enabled": true,
-    "image": "assets/img/birthday-announcement.jpg",
+    "image": "assets/img/banner-custom.jpg",
     "imageAlt": "Invitación especial de Onnno",
     "title": "¡Feliz cumpleaños, Onnno!",
     "subtitle": "8 años — jueves 10 de septiembre · menú especial · Mártires de Tacubaya 308",
-    "confettiStyle": "clasico"
+    "confettiStyle": "fuegos"
   }
 }
