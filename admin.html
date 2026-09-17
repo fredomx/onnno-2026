@@ -242,6 +242,9 @@
 
   form.addEventListener("submit", function (e) {
     e.preventDefault();
+    if (!window.confirm("¿Confirmas que deseas guardar los cambios? Se publicarán en el sitio en uno o dos minutos.")) {
+      return;
+    }
     var pw = sessionStorage.getItem(PASS_KEY) || passwordInput.value.trim();
     var content = collectContent();
     saveStatus.textContent = "Guardando…";
