@@ -16,6 +16,9 @@
      GITHUB_TOKEN    - a GitHub personal access token with `contents: write`
                        (fine-grained) or `repo` (classic) on this one repo
    ========================================================================== */
+"use strict";
+
+const { passwordsMatch } = require("./_lib/checkPassword");
 
 const REPO = "fredomx/onnno-2026";
 const BRANCH = "main";
@@ -87,7 +90,7 @@ exports.handler = async (event) => {
   if (!process.env.ADMIN_PASSWORD) {
     return { statusCode: 500, body: JSON.stringify({ error: "El panel no está configurado (falta ADMIN_PASSWORD)." }) };
   }
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
+  if (!passwordsMatch(password, process.env.ADMIN_PASSWORD)) {
     return { statusCode: 401, body: JSON.stringify({ error: "Contraseña incorrecta." }) };
   }
   if (!content || typeof content !== "object") {

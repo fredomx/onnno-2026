@@ -28,13 +28,35 @@ const SAMPLE_CONTENT = {
   banner: { enabled: false, image: "assets/img/x.jpg", imageAlt: "alt", title: "T", subtitle: "S" }
 };
 
+const VERIFY_URL = "/.netlify/functions/verify-password";
+const CONTENT_URL = "/content.json";
+const SAVE_URL = "/.netlify/functions/save-content";
+
+// Routes fetch() calls by URL to a handler that returns {ok, data}. Any
+// URL not in `routes` throws, so a test only has to describe the
+// endpoints it actually cares about.
+function routedFetch(routes) {
+  return async (url, opts) => {
+    const route = routes[url];
+    if (!route) throw new Error("unexpected fetch to " + url);
+    const { ok = true, data = {} } = await route(opts);
+    return { ok, status: ok ? 200 : 401, json: async () => data };
+  };
+}
+
+function okVerify() {
+  return async () => ({ ok: true, data: { ok: true } });
+}
+
+function okContent(content = SAMPLE_CONTENT) {
+  return async () => ({ ok: true, data: content });
+}
+
 // Loads the real admin.html markup + its real inline script into jsdom.
-// `fetchImpl` lets each test control what /content.json and
-// /.netlify/functions/save-content return.
-function loadAdminPage(fetchImpl, { confirmReturns = true } = {}) {
+function loadAdminPage(routes, { confirmReturns = true } = {}) {
   const dom = new JSDOM(ADMIN_HTML, { runScripts: "outside-only", url: "https://onnno.mx/admin.html" });
   const { window } = dom;
-  window.fetch = fetchImpl;
+  window.fetch = routedFetch(routes);
   window.confirm = () => confirmReturns;
   window.eval(INLINE_SCRIPT);
   return window;
@@ -47,55 +69,84 @@ function fill(window, id, value) {
 async function flushMicrotasks() {
   await new Promise((r) => setTimeout(r, 0));
   await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+}
+
+async function unlockAs(window, password) {
+  fill(window, "password", password);
+  window.document.getElementById("unlock").click();
+  await flushMicrotasks();
 }
 
 test("shows a gate error and makes no request when the password field is empty", async () => {
-  let fetchCalled = false;
-  const window = loadAdminPage(async () => { fetchCalled = true; });
+  const window = loadAdminPage({}); // any fetch call would throw ("unexpected fetch")
   window.document.getElementById("unlock").click();
   await flushMicrotasks();
   assert.equal(window.document.getElementById("gate-error").hidden, false);
-  assert.equal(fetchCalled, false);
   assert.equal(window.document.getElementById("form").hidden, true);
 });
 
-test("unlock loads content.json and reveals the populated form", async () => {
-  const window = loadAdminPage(async (url) => {
-    assert.equal(url, "/content.json");
-    return { ok: true, json: async () => SAMPLE_CONTENT };
+test("a wrong password is rejected by the server BEFORE the form is ever shown or content.json is fetched", async () => {
+  let contentJsonRequested = false;
+  const window = loadAdminPage({
+    [VERIFY_URL]: async () => ({ ok: false, data: { error: "Contraseña incorrecta." } }),
+    [CONTENT_URL]: async () => { contentJsonRequested = true; return { ok: true, data: SAMPLE_CONTENT }; }
   });
-  fill(window, "password", "some-password");
-  window.document.getElementById("unlock").click();
-  await flushMicrotasks();
 
+  await unlockAs(window, "wrong-guess");
+
+  assert.equal(window.document.getElementById("gate").hidden, false, "gate must stay up on a wrong password");
+  assert.equal(window.document.getElementById("form").hidden, true, "form must never be revealed");
+  assert.equal(contentJsonRequested, false, "content.json must not even be fetched until the password checks out");
+  assert.match(window.document.getElementById("gate-error").textContent, /Contraseña incorrecta/);
+  assert.equal(window.sessionStorage.getItem("onnno_admin_pw"), null);
+});
+
+test("a correct password verifies, then loads content.json and reveals the populated form", async () => {
+  let verifyCalledWith = null;
+  const window = loadAdminPage({
+    [VERIFY_URL]: async (opts) => { verifyCalledWith = JSON.parse(opts.body).password; return { ok: true, data: { ok: true } }; },
+    [CONTENT_URL]: okContent()
+  });
+
+  await unlockAs(window, "the-real-password");
+
+  assert.equal(verifyCalledWith, "the-real-password");
   assert.equal(window.document.getElementById("gate").hidden, true);
   assert.equal(window.document.getElementById("form").hidden, false);
   assert.equal(window.document.getElementById("restaurantAddress").value, "Mártires de Tacubaya 308‑C");
   assert.equal(window.document.getElementById("bannerEnabled").checked, false);
-  assert.equal(window.sessionStorage.getItem("onnno_admin_pw"), "some-password");
+  assert.equal(window.sessionStorage.getItem("onnno_admin_pw"), "the-real-password");
 });
 
-test("shows a gate error (and stays on the gate) if content.json can't be loaded", async () => {
-  const window = loadAdminPage(async () => ({ ok: false, status: 500, json: async () => ({}) }));
-  fill(window, "password", "whatever");
-  window.document.getElementById("unlock").click();
-  await flushMicrotasks();
+test("if the password is right but content.json fails to load, stays on the gate with an error", async () => {
+  const window = loadAdminPage({
+    [VERIFY_URL]: okVerify(),
+    [CONTENT_URL]: async () => ({ ok: false, data: {} })
+  });
+  await unlockAs(window, "the-real-password");
   assert.equal(window.document.getElementById("gate-error").hidden, false);
   assert.equal(window.document.getElementById("form").hidden, true);
 });
 
-test("canceling the confirm dialog on save sends no request", async () => {
+test("if the verify-password function itself errors (e.g. not configured), shows that error on the gate", async () => {
+  const window = loadAdminPage({
+    [VERIFY_URL]: async () => ({ ok: false, data: { error: "El panel no está configurado (falta ADMIN_PASSWORD)." } })
+  });
+  await unlockAs(window, "anything");
+  assert.match(window.document.getElementById("gate-error").textContent, /no está configurado/);
+  assert.equal(window.document.getElementById("form").hidden, true);
+});
+
+test("canceling the confirm dialog on save sends no save request", async () => {
   let saveCalled = false;
-  const window = loadAdminPage(async (url) => {
-    if (url === "/content.json") return { ok: true, json: async () => SAMPLE_CONTENT };
-    saveCalled = true;
-    return { ok: true, json: async () => ({ ok: true, content: SAMPLE_CONTENT }) };
+  const window = loadAdminPage({
+    [VERIFY_URL]: okVerify(),
+    [CONTENT_URL]: okContent(),
+    [SAVE_URL]: async () => { saveCalled = true; return { ok: true, data: { ok: true, content: SAMPLE_CONTENT } }; }
   }, { confirmReturns: false });
 
-  fill(window, "password", "pw");
-  window.document.getElementById("unlock").click();
-  await flushMicrotasks();
-
+  await unlockAs(window, "pw");
   window.document.getElementById("form").dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true }));
   await flushMicrotasks();
 
@@ -105,15 +156,16 @@ test("canceling the confirm dialog on save sends no request", async () => {
 
 test("confirming save posts the edited, remembered-password content and shows success", async () => {
   let savedBody = null;
-  const window = loadAdminPage(async (url, opts) => {
-    if (url === "/content.json") return { ok: true, json: async () => SAMPLE_CONTENT };
-    savedBody = JSON.parse(opts.body);
-    return { ok: true, json: async () => ({ ok: true, content: { ...SAMPLE_CONTENT, heroTagline: "Nuevo" } }) };
+  const window = loadAdminPage({
+    [VERIFY_URL]: okVerify(),
+    [CONTENT_URL]: okContent(),
+    [SAVE_URL]: async (opts) => {
+      savedBody = JSON.parse(opts.body);
+      return { ok: true, data: { ok: true, content: { ...SAMPLE_CONTENT, heroTagline: "Nuevo" } } };
+    }
   }, { confirmReturns: true });
 
-  fill(window, "password", "the-real-password");
-  window.document.getElementById("unlock").click();
-  await flushMicrotasks();
+  await unlockAs(window, "the-real-password");
 
   window.document.getElementById("heroTagline").value = "Nuevo";
   window.document.getElementById("bannerEnabled").checked = true;
@@ -131,16 +183,14 @@ test("confirming save posts the edited, remembered-password content and shows su
   assert.equal(status.className, "ok");
 });
 
-test("a wrong-password response from the function clears the remembered password and shows the error", async () => {
-  const window = loadAdminPage(async (url) => {
-    if (url === "/content.json") return { ok: true, json: async () => SAMPLE_CONTENT };
-    return { ok: false, json: async () => ({ error: "Contraseña incorrecta." }) };
+test("if the password is later rejected on save (e.g. rotated mid-session), clears the remembered password and shows the error", async () => {
+  const window = loadAdminPage({
+    [VERIFY_URL]: okVerify(),
+    [CONTENT_URL]: okContent(),
+    [SAVE_URL]: async () => ({ ok: false, data: { error: "Contraseña incorrecta." } })
   }, { confirmReturns: true });
 
-  fill(window, "password", "wrong-one");
-  window.document.getElementById("unlock").click();
-  await flushMicrotasks();
-
+  await unlockAs(window, "was-valid-at-unlock-time");
   window.document.getElementById("form").dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true }));
   await flushMicrotasks();
 
