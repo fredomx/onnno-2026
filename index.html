@@ -60,7 +60,7 @@
       <span>Índice</span>
       <span class="site-nav__toggle-icon"><i></i><i></i></span>
     </button>
-    <a href="https://www.instagram.com/onnno.mx/" target="_blank" rel="noopener" class="site-nav__social">Instagram ↗︎</a>
+    <a href="https://www.instagram.com/onnno.mx/" target="_blank" rel="noopener" class="site-nav__social" data-field-href="social.instagramUrl">Instagram ↗︎</a>
   </div>
 </header>
 
@@ -76,8 +76,8 @@
     <li><a href="#visit"><span class="n">08</span>Visita</a></li>
   </ol>
   <div class="site-index__foot">
-    <span class="site-index__address">Restaurante: Mártires de Tacubaya 308‑C, Oaxaca de Juárez</span>
-    <span class="site-index__address">Panadería: Morelos 1201, Oaxaca de Juárez</span>
+    <span class="site-index__address">Restaurante: <span data-field="contact.restaurantAddress">Mártires de Tacubaya 308‑C</span>, Oaxaca de Juárez</span>
+    <span class="site-index__address">Panadería: <span data-field="contact.bakeryAddress">Morelos 1201</span>, Oaxaca de Juárez</span>
   </div>
 </nav>
 
@@ -100,7 +100,7 @@
       <h1 class="hero__word reveal" data-kinetic>
         <span class="reveal-mask"><span class="reveal-line">Onnno</span></span>
       </h1>
-      <p class="hero__descriptor reveal">Restaurante <span class="slash">/</span> Panadería <span class="slash">/</span> 2018—2026</p>
+      <p class="hero__descriptor reveal" data-hero-tagline>Restaurante <span class="slash">/</span> Panadería <span class="slash">/</span> 2018—2026</p>
     </div>
 
     <div class="hero__scroll reveal" aria-hidden="true">
@@ -319,16 +319,16 @@
     <div class="visit__grid">
       <div class="reveal">
         <span class="visit__label">Dirección</span>
-        <p>Restaurante: <a href="https://share.google/Bqj0bsnnkAFdw4XeE" target="_blank" rel="noopener">Mártires de Tacubaya 308‑C</a><br>Panadería: <a href="https://share.google/AIkUxS0r8s1oV5UMO" target="_blank" rel="noopener">Morelos 1201</a><br>Oaxaca de Juárez, Oaxaca, México</p>
+        <p>Restaurante: <a href="https://share.google/Bqj0bsnnkAFdw4XeE" target="_blank" rel="noopener" data-field="contact.restaurantAddress" data-field-href="contact.restaurantMapUrl">Mártires de Tacubaya 308‑C</a><br>Panadería: <a href="https://share.google/AIkUxS0r8s1oV5UMO" target="_blank" rel="noopener" data-field="contact.bakeryAddress" data-field-href="contact.bakeryMapUrl">Morelos 1201</a><br><span data-field="contact.city">Oaxaca de Juárez, Oaxaca, México</span></p>
       </div>
       <div class="reveal">
         <span class="visit__label">Horario</span>
-        <p><strong>Panadería</strong><br>Lunes–viernes: 7:30 a.m.–8 p.m.<br>Sábado: 7:30 a.m.–5 p.m.<br>Domingo: 7:30 a.m.–3 p.m.</p>
-        <p><strong>Restaurante</strong><br>Lunes–domingo: 8 a.m.–4 p.m.</p>
+        <p><strong>Panadería</strong><br><span data-field-html="contact.hoursBakery">Lunes–viernes: 7:30 a.m.–8 p.m.<br>Sábado: 7:30 a.m.–5 p.m.<br>Domingo: 7:30 a.m.–3 p.m.</span></p>
+        <p><strong>Restaurante</strong><br><span data-field-html="contact.hoursRestaurant">Lunes–domingo: 8 a.m.–4 p.m.</span></p>
       </div>
       <div class="reveal">
         <span class="visit__label">Encuéntranos</span>
-        <p><a href="https://www.instagram.com/onnno.mx/" target="_blank" rel="noopener">@onnno.mx ↗︎</a></p>
+        <p><a href="https://www.instagram.com/onnno.mx/" target="_blank" rel="noopener" data-field-href="social.instagramUrl"><span data-field="social.instagramHandle">@onnno.mx</span> ↗︎</a></p>
       </div>
     </div>
   </section>
@@ -346,13 +346,12 @@
 </footer>
 
 <!-- ============ BANNER / ANUNCIO (modal) ============
-     Desactivado: el anuncio del 8vo aniversario ya pasó.
-     Para un banner futuro: descomenta este bloque, cambia la imagen,
-     el titulo y el subtitulo. El CSS (.birthday en css/style.css) y el
-     JS (bloque del modal en js/main.js) siguen activos y se reutilizan
-     tal cual; el JS no hace nada mientras este bloque este comentado.
-
-<div class="birthday" data-birthday-modal aria-hidden="true">
+     Controlado desde /admin.html vía content.json (banner.*): activar/
+     desactivar, imagen, título y subtítulo. El texto de abajo es solo un
+     valor por defecto de respaldo — se sobrescribe en cada carga si
+     content.json carga bien. Oculto por defecto (banner.enabled: false).
+     El CSS vive en css/style.css (.birthday) y el JS en js/main.js. -->
+<div class="birthday" data-birthday-modal data-banner-enabled="0" aria-hidden="true">
   <div class="birthday__backdrop" data-birthday-close></div>
   <canvas class="birthday__confetti" data-birthday-confetti aria-hidden="true"></canvas>
   <div class="birthday__card" role="dialog" aria-modal="true" aria-labelledby="birthday-title">
@@ -360,16 +359,16 @@
       <span aria-hidden="true">&times;</span>
     </button>
     <button type="button" class="birthday__media" data-birthday-replay aria-label="Repetir confeti">
-      <img src="assets/img/birthday-announcement.jpg" alt="Invitación: 8 años de Onnno, jueves 10 de septiembre, menú especial, en Mártires de Tacubaya 308.">
+      <img src="assets/img/birthday-announcement.jpg" alt="Invitación especial de Onnno" data-field-src="banner.image" data-field-alt="banner.imageAlt">
     </button>
     <div class="birthday__text">
-      <h2 id="birthday-title" class="birthday__title">¡Feliz cumpleaños, Onnno!</h2>
-      <p class="birthday__sub">8 años — jueves 10 de septiembre · menú especial · Mártires de Tacubaya 308</p>
+      <h2 id="birthday-title" class="birthday__title" data-field="banner.title">¡Feliz cumpleaños, Onnno!</h2>
+      <p class="birthday__sub" data-field="banner.subtitle">8 años — jueves 10 de septiembre · menú especial · Mártires de Tacubaya 308</p>
     </div>
   </div>
 </div>
--->
 
-<script src="js/main.js?v=74"></script>
+<script src="js/content.js?v=1"></script>
+<script src="js/main.js?v=75"></script>
 </body>
 </html>

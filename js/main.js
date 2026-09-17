@@ -416,9 +416,11 @@ function unlockBodyScroll(){
 
 /* ============================== BIRTHDAY ANNOUNCEMENT ==============================
    Shows an announcement automatically on every page load, with a confetti
-   burst on open. Currently inert: the markup in index.html is commented out,
-   so this block bails immediately. Uncomment that markup to run a future
-   banner — this JS and the .birthday CSS are reused as-is. */
+   burst on open — but only when js/content.js says banner.enabled is true
+   in content.json (edited from /admin.html). Waits for its
+   "onnno:content-ready" event rather than opening unconditionally, and
+   defaults to staying closed (via the modal's data-banner-enabled="0" in
+   index.html) if that event never arrives. */
 (function () {
   "use strict";
 
@@ -521,5 +523,9 @@ function unlockBodyScroll(){
     });
   }
 
-  setTimeout(openModal, 1000);
+  document.addEventListener("onnno:content-ready", function () {
+    if (modal.dataset.bannerEnabled === "1") {
+      setTimeout(openModal, 1000);
+    }
+  });
 })();
