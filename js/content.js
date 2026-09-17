@@ -83,6 +83,7 @@
     if (modal) {
       var banner = content && content.banner;
       modal.dataset.bannerEnabled = banner && banner.enabled ? "1" : "0";
+      modal.dataset.confettiStyle = (banner && typeof banner.confettiStyle === "string") ? banner.confettiStyle : "clasico";
     }
   }
 

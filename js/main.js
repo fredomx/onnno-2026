@@ -432,6 +432,111 @@ function unlockBodyScroll(){
   var confettiCanvas = modal.querySelector("[data-birthday-confetti]");
   var confettiRaf = null;
 
+  /* Three interchangeable confetti behaviors, picked by content.json's
+     banner.confettiStyle (via modal.dataset.confettiStyle, set by
+     js/content.js). Each style is just an init(canvas, colors, count) that
+     builds the particle list and a step(piece, elapsedMs) that moves one
+     particle for the current frame — the draw loop below is shared, so
+     "cool" here means a different motion, not a different shape. */
+  var CONFETTI_STYLES = {
+    // Clásico: falls like rain, drifting and tumbling as it goes.
+    clasico: {
+      init: function (canvas, colors, count) {
+        var pieces = [];
+        for (var i = 0; i < count; i++) {
+          pieces.push({
+            x: Math.random() * canvas.width,
+            y: -20 - Math.random() * canvas.height * 0.6,
+            w: 5 + Math.random() * 6,
+            h: 8 + Math.random() * 8,
+            color: colors[(Math.random() * colors.length) | 0],
+            speed: 2.2 + Math.random() * 2.6,
+            drift: (Math.random() - 0.5) * 2.2,
+            rotation: Math.random() * Math.PI,
+            rotSpeed: (Math.random() - 0.5) * 0.22
+          });
+        }
+        return pieces;
+      },
+      step: function (p) {
+        p.y += p.speed;
+        p.x += p.drift;
+        p.rotation += p.rotSpeed;
+      }
+    },
+
+    // Fuegos artificiales: bursts outward from a few points, then gravity
+    // pulls the pieces back down.
+    fuegos: {
+      init: function (canvas, colors, count) {
+        var origins = [];
+        for (var o = 0; o < 3; o++) {
+          origins.push({
+            x: canvas.width * (0.2 + 0.6 * Math.random()),
+            y: canvas.height * (0.25 + 0.2 * Math.random())
+          });
+        }
+        var pieces = [];
+        for (var i = 0; i < count; i++) {
+          var origin = origins[i % origins.length];
+          var angle = Math.random() * Math.PI * 2;
+          var speed = 2 + Math.random() * 5;
+          pieces.push({
+            x: origin.x,
+            y: origin.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            w: 5 + Math.random() * 5,
+            h: 5 + Math.random() * 5,
+            color: colors[(Math.random() * colors.length) | 0],
+            rotation: Math.random() * Math.PI,
+            rotSpeed: (Math.random() - 0.5) * 0.3
+          });
+        }
+        return pieces;
+      },
+      step: function (p) {
+        p.vy += 0.12;
+        p.vx *= 0.985;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rotation += p.rotSpeed;
+      }
+    },
+
+    // Espiral: rises from the middle of the screen in a widening swirl.
+    espiral: {
+      init: function (canvas, colors, count) {
+        var pieces = [];
+        for (var i = 0; i < count; i++) {
+          pieces.push({
+            cx: canvas.width / 2,
+            cy: canvas.height * 0.55,
+            angle: Math.random() * Math.PI * 2,
+            radius: 4 + Math.random() * 10,
+            angularSpeed: 0.05 + Math.random() * 0.07,
+            radiusSpeed: 0.9 + Math.random() * 1.1,
+            riseSpeed: 0.6 + Math.random() * 1,
+            w: 5 + Math.random() * 5,
+            h: 5 + Math.random() * 5,
+            color: colors[(Math.random() * colors.length) | 0],
+            rotation: Math.random() * Math.PI,
+            rotSpeed: (Math.random() - 0.5) * 0.25
+          });
+        }
+        return pieces;
+      },
+      step: function (p) {
+        p.angle += p.angularSpeed;
+        p.radius += p.radiusSpeed;
+        p.cy -= p.riseSpeed * 0.15;
+        p.x = p.cx + Math.cos(p.angle) * p.radius;
+        p.y = p.cy + Math.sin(p.angle) * p.radius * 0.6;
+        p.rotation += p.rotSpeed;
+      }
+    }
+  };
+
   function fireConfetti() {
     if (reduceMotion || !confettiCanvas) return;
     var ctx = confettiCanvas.getContext("2d");
@@ -445,20 +550,9 @@ function unlockBodyScroll(){
 
     var colors = ["#1A3560", "#e7c86a", "#c9673f", "#f3ede1", "#8fae7c"];
     var count = window.innerWidth < 640 ? 80 : 150;
-    var pieces = [];
-    for (var i = 0; i < count; i++) {
-      pieces.push({
-        x: Math.random() * confettiCanvas.width,
-        y: -20 - Math.random() * confettiCanvas.height * 0.6,
-        w: 5 + Math.random() * 6,
-        h: 8 + Math.random() * 8,
-        color: colors[(Math.random() * colors.length) | 0],
-        speed: 2.2 + Math.random() * 2.6,
-        drift: (Math.random() - 0.5) * 2.2,
-        rotation: Math.random() * Math.PI,
-        rotSpeed: (Math.random() - 0.5) * 0.22
-      });
-    }
+    var styleKey = CONFETTI_STYLES[modal.dataset.confettiStyle] ? modal.dataset.confettiStyle : "clasico";
+    var style = CONFETTI_STYLES[styleKey];
+    var pieces = style.init(confettiCanvas, colors, count);
 
     var duration = 3400;
     var fadeStart = duration - 700;
@@ -470,9 +564,7 @@ function unlockBodyScroll(){
       ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
       var opacity = elapsed > fadeStart ? Math.max(0, 1 - (elapsed - fadeStart) / (duration - fadeStart)) : 1;
       pieces.forEach(function (p) {
-        p.y += p.speed;
-        p.x += p.drift;
-        p.rotation += p.rotSpeed;
+        style.step(p, elapsed);
         ctx.save();
         ctx.globalAlpha = opacity;
         ctx.translate(p.x, p.y);

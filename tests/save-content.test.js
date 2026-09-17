@@ -34,6 +34,33 @@ function mockFetchSequence(responses) {
   };
 }
 
+// Same as mockFetchSequence, but also records {url, opts} for each call so
+// tests can assert on request order/shape (used by the image-upload tests,
+// where a save can make up to four GitHub calls: GET/PUT image, GET/PUT
+// content.json).
+function mockFetchSequenceRecording(responses) {
+  const calls = [];
+  let i = 0;
+  global.fetch = async (url, opts) => {
+    calls.push({ url, opts });
+    const r = responses[i++];
+    if (!r) throw new Error("mockFetchSequenceRecording: ran out of queued responses for " + url);
+    return {
+      ok: r.ok,
+      status: r.status,
+      json: async () => r.json,
+      text: async () => r.text || ""
+    };
+  };
+  return calls;
+}
+
+function pngDataUrl() {
+  // Contents don't need to be a real image for this function's logic — it
+  // only checks the mime prefix and decodes/size-checks the base64 body.
+  return "data:image/png;base64," + Buffer.from("hello").toString("base64");
+}
+
 test.beforeEach(() => {
   resetEnv();
 });
@@ -205,4 +232,131 @@ test("trims and caps oversized string fields instead of failing", async () => {
   // window get trimmed away too — result is "at most 2000", here 1998.
   assert.ok(data.content.heroTagline.length <= 2000);
   assert.equal(data.content.heroTagline, "a".repeat(1998));
+});
+
+test("accepts a valid banner.confettiStyle and drops an invalid one instead of writing it through", async () => {
+  const current = { banner: { confettiStyle: "clasico" } };
+
+  mockFetchSequence([
+    { ok: true, status: 200, json: { sha: "s", content: b64(current) } },
+    { ok: true, status: 200, json: {} }
+  ]);
+  let res = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({ password: "test-pw", content: { banner: { confettiStyle: "fuegos" } } })
+  });
+  assert.equal(JSON.parse(res.body).content.banner.confettiStyle, "fuegos");
+
+  mockFetchSequence([
+    { ok: true, status: 200, json: { sha: "s", content: b64(current) } },
+    { ok: true, status: 200, json: {} }
+  ]);
+  res = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({ password: "test-pw", content: { banner: { confettiStyle: "not-a-real-style" } } })
+  });
+  assert.equal(JSON.parse(res.body).content.banner.confettiStyle, "clasico", "invalid enum value must be dropped, keeping the prior one");
+});
+
+test("bannerImageUpload: commits a new image (no prior upload) then points banner.image at it", async () => {
+  const currentJsonContent = { banner: { image: "assets/img/birthday-announcement.jpg", enabled: false } };
+  const calls = mockFetchSequenceRecording([
+    { ok: false, status: 404, text: "Not Found" }, // GET assets/img/banner-custom.png -> doesn't exist yet
+    { ok: true, status: 200, json: { content: { sha: "img-sha-1" } } }, // PUT image
+    { ok: true, status: 200, json: { sha: "content-sha-1", content: b64(currentJsonContent) } }, // GET content.json
+    { ok: true, status: 200, json: {} } // PUT content.json
+  ]);
+
+  const res = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({
+      password: "test-pw",
+      content: { banner: { title: "Nuevo anuncio" } },
+      bannerImageUpload: { dataUrl: pngDataUrl(), filename: "foto.png" }
+    })
+  });
+
+  assert.equal(res.statusCode, 200);
+  const data = JSON.parse(res.body);
+  assert.equal(data.content.banner.image, "assets/img/banner-custom.png");
+  assert.equal(data.content.banner.title, "Nuevo anuncio");
+
+  assert.equal(calls.length, 4);
+  assert.match(calls[0].url, /banner-custom\.png\?ref=main/);
+  assert.equal(calls[1].opts.method, "PUT");
+  const imagePutBody = JSON.parse(calls[1].opts.body);
+  assert.equal(imagePutBody.sha, undefined, "must not send a sha when creating a new file");
+  assert.equal(imagePutBody.content, Buffer.from("hello").toString("base64"));
+});
+
+test("bannerImageUpload: reuses the previous upload's sha when overwriting it", async () => {
+  const currentJsonContent = { banner: {} };
+  const calls = mockFetchSequenceRecording([
+    { ok: true, status: 200, json: { sha: "existing-image-sha" } }, // GET existing image -> found
+    { ok: true, status: 200, json: {} }, // PUT image
+    { ok: true, status: 200, json: { sha: "content-sha", content: b64(currentJsonContent) } },
+    { ok: true, status: 200, json: {} }
+  ]);
+
+  await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({
+      password: "test-pw",
+      content: {},
+      bannerImageUpload: { dataUrl: pngDataUrl(), filename: "foto.png" }
+    })
+  });
+
+  const imagePutBody = JSON.parse(calls[1].opts.body);
+  assert.equal(imagePutBody.sha, "existing-image-sha");
+});
+
+test("bannerImageUpload: rejects a disallowed mime type without ever touching content.json", async () => {
+  let contentJsonTouched = false;
+  global.fetch = async (url) => { contentJsonTouched = contentJsonTouched || /content\.json/.test(url); return { ok: false, status: 404, text: async () => "" }; };
+
+  const res = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({
+      password: "test-pw",
+      content: {},
+      bannerImageUpload: { dataUrl: "data:image/gif;base64,aGVsbG8=", filename: "foto.gif" }
+    })
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.match(JSON.parse(res.body).error, /formato/i);
+  assert.equal(contentJsonTouched, false);
+});
+
+test("bannerImageUpload: rejects an oversized image without ever touching content.json", async () => {
+  let contentJsonTouched = false;
+  global.fetch = async (url) => { contentJsonTouched = contentJsonTouched || /content\.json/.test(url); return { ok: false, status: 404, text: async () => "" }; };
+
+  const hugeBase64 = "A".repeat(6 * 1024 * 1024); // decodes to ~4.5MB, over the 4MB cap
+  const res = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({
+      password: "test-pw",
+      content: {},
+      bannerImageUpload: { dataUrl: "data:image/png;base64," + hugeBase64, filename: "foto.png" }
+    })
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.match(JSON.parse(res.body).error, /pesa demasiado/i);
+  assert.equal(contentJsonTouched, false);
+});
+
+test("bannerImageUpload: rejects a malformed data URL", async () => {
+  const res = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({
+      password: "test-pw",
+      content: {},
+      bannerImageUpload: { dataUrl: "not-a-data-url", filename: "foto.png" }
+    })
+  });
+  assert.equal(res.statusCode, 400);
+  assert.match(JSON.parse(res.body).error, /inválida/i);
 });

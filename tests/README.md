@@ -34,14 +34,23 @@ their logic.
 - **`save-content.test.js`** — the Netlify function: rejects non-POST/
   bad JSON, rejects a wrong or unconfigured password *before* ever
   calling GitHub, only merges the whitelisted `content.json` fields
-  (unknown/injected keys are dropped), preserves fields the request
-  omitted, sends back the `sha` it just read (avoids clobbering a
-  concurrent edit), and surfaces GitHub GET/PUT failures clearly.
+  (unknown/injected keys are dropped, an invalid `banner.confettiStyle`
+  is dropped in favor of the enum's known values), preserves fields the
+  request omitted, sends back the `sha` it just read (avoids clobbering
+  a concurrent edit), and surfaces GitHub GET/PUT failures clearly. Also
+  covers `bannerImageUpload`: commits the image to a single fixed path
+  (`assets/img/banner-custom.<ext>`, overwriting any prior upload),
+  reuses that file's existing `sha` when one is already there, points
+  `banner.image` at the new path, and rejects a disallowed mime type,
+  an oversized image, or a malformed data URL — each *before* ever
+  touching `content.json`.
 - **`content-hydration.test.js`** — `js/content.js`: patches text/HTML/
   href/src/alt fields and rebuilds the hero tagline's styled slashes
   from real `content.json` data; falls back to the baked-in HTML
   untouched if the fetch fails; only auto-shows the banner when
-  `banner.enabled` is explicitly `true`; and — the security-sensitive
+  `banner.enabled` is explicitly `true`; passes `banner.confettiStyle`
+  through to the modal (defaulting to `"clasico"` when absent) so
+  `main.js` can pick the right animation; and — the security-sensitive
   part — refuses an unsafe `href`/`src` (e.g. `javascript:`) and
   HTML-escapes text before turning `\n` into `<br>`, so `content.json`
   can never inject a live element into the page.
@@ -52,7 +61,13 @@ their logic.
   cancelled; a successful save posts the remembered password and
   edited fields; and a password rejected later at save time (e.g.
   rotated mid-session) clears the remembered password and shows the
-  error.
+  error. Also covers the banner image picker: a valid file shows a
+  preview and is queued (not sent) until Save; a disallowed type or an
+  oversized file is rejected client-side with the existing image kept
+  on screen; Save includes the queued file as `bannerImageUpload` and
+  refreshes the preview from the response; and Save without picking a
+  new file never sends `bannerImageUpload` at all — plus the confetti
+  style `<select>` round-tripping into the saved content.
 
 ## Not covered (by design, for a "super minimal" panel)
 

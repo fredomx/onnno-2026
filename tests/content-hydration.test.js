@@ -100,3 +100,13 @@ test("escapes HTML in a data-field-html value before turning newlines into <br>"
   assert.equal(el.querySelector("img"), null, "must not create a live <img> from untrusted markup");
   assert.equal(el.innerHTML, "&lt;img src=x onerror=alert(1)&gt;<br>Line 2");
 });
+
+test("passes banner.confettiStyle through to the modal's dataset so main.js can pick the right animation", async () => {
+  const window = await loadWithContent({ banner: { enabled: true, confettiStyle: "espiral" } });
+  assert.equal(window.document.querySelector("[data-birthday-modal]").dataset.confettiStyle, "espiral");
+});
+
+test("defaults confettiStyle to \"clasico\" when content.json omits it", async () => {
+  const window = await loadWithContent({ banner: { enabled: true } });
+  assert.equal(window.document.querySelector("[data-birthday-modal]").dataset.confettiStyle, "clasico");
+});

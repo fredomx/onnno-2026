@@ -11,6 +11,12 @@
    keeps its current value from the live content.json (fetched fresh right
    before the commit, so this can't clobber a concurrent edit).
 
+   If the request also carries `bannerImageUpload` ({dataUrl, filename}),
+   that image is committed first (as assets/img/banner-custom.<ext>,
+   overwriting whatever was there before — this is a single-image slot,
+   not a gallery) and its path is what banner.image ends up set to,
+   overriding anything sent in `content.banner.image`.
+
    Required Netlify env vars (Site settings -> Environment variables):
      ADMIN_PASSWORD  - the password admin.html asks for
      GITHUB_TOKEN    - a GitHub personal access token with `contents: write`
@@ -23,24 +29,27 @@ const { passwordsMatch } = require("./_lib/checkPassword");
 const REPO = "fredomx/onnno-2026";
 const BRANCH = "main";
 const PATH = "content.json";
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4MB raw; keeps the base64 request comfortably under the 6MB function payload limit
+const IMAGE_MIME_TO_EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
-// path -> "string" | "bool". Anything not listed here is dropped.
+// path -> {type: "string"|"bool"|"enum", values?}. Anything not listed here is dropped.
 const FIELDS = {
-  "contact.restaurantAddress": "string",
-  "contact.restaurantMapUrl": "string",
-  "contact.bakeryAddress": "string",
-  "contact.bakeryMapUrl": "string",
-  "contact.city": "string",
-  "contact.hoursBakery": "string",
-  "contact.hoursRestaurant": "string",
-  "social.instagramUrl": "string",
-  "social.instagramHandle": "string",
-  "heroTagline": "string",
-  "banner.enabled": "bool",
-  "banner.image": "string",
-  "banner.imageAlt": "string",
-  "banner.title": "string",
-  "banner.subtitle": "string"
+  "contact.restaurantAddress": { type: "string" },
+  "contact.restaurantMapUrl": { type: "string" },
+  "contact.bakeryAddress": { type: "string" },
+  "contact.bakeryMapUrl": { type: "string" },
+  "contact.city": { type: "string" },
+  "contact.hoursBakery": { type: "string" },
+  "contact.hoursRestaurant": { type: "string" },
+  "social.instagramUrl": { type: "string" },
+  "social.instagramHandle": { type: "string" },
+  "heroTagline": { type: "string" },
+  "banner.enabled": { type: "bool" },
+  "banner.image": { type: "string" },
+  "banner.imageAlt": { type: "string" },
+  "banner.title": { type: "string" },
+  "banner.subtitle": { type: "string" },
+  "banner.confettiStyle": { type: "enum", values: ["clasico", "fuegos", "espiral"] }
 };
 
 function getPath(obj, path) {
@@ -61,16 +70,65 @@ function setPath(obj, path, value) {
 function sanitizeMerge(base, incoming) {
   const out = JSON.parse(JSON.stringify(base || {}));
   for (const path of Object.keys(FIELDS)) {
-    const type = FIELDS[path];
+    const spec = FIELDS[path];
     const val = getPath(incoming, path);
     if (val === undefined) continue;
-    if (type === "string" && typeof val === "string") {
+    if (spec.type === "string" && typeof val === "string") {
       setPath(out, path, val.slice(0, 2000).trim());
-    } else if (type === "bool") {
+    } else if (spec.type === "bool") {
       setPath(out, path, !!val);
+    } else if (spec.type === "enum" && typeof val === "string" && spec.values.includes(val)) {
+      setPath(out, path, val);
     }
   }
   return out;
+}
+
+// Commits a data-URL image as the site's one banner image slot, overwriting
+// any previous upload regardless of its extension. Returns the committed
+// path (e.g. "assets/img/banner-custom.jpg").
+async function commitBannerImage(upload, ghHeaders) {
+  const dataUrl = upload && upload.dataUrl;
+  const match = typeof dataUrl === "string" && /^data:([^;]+);base64,([a-z0-9+/=\s]+)$/i.exec(dataUrl);
+  if (!match) throw new Error("Imagen inválida.");
+
+  const mime = match[1].toLowerCase();
+  const ext = IMAGE_MIME_TO_EXT[mime];
+  if (!ext) throw new Error("Formato de imagen no permitido. Usa JPG, PNG o WEBP.");
+
+  const base64Data = match[2].replace(/\s/g, "");
+  const byteLength = Math.floor((base64Data.length * 3) / 4);
+  if (byteLength > MAX_IMAGE_BYTES) {
+    throw new Error(`La imagen pesa demasiado (máximo ${(MAX_IMAGE_BYTES / (1024 * 1024)).toFixed(0)} MB).`);
+  }
+
+  const imagePath = `assets/img/banner-custom.${ext}`;
+  const imageApiUrl = `https://api.github.com/repos/${REPO}/contents/${imagePath}`;
+
+  let sha;
+  const existingRes = await fetch(`${imageApiUrl}?ref=${BRANCH}`, { headers: ghHeaders });
+  if (existingRes.ok) {
+    sha = (await existingRes.json()).sha;
+  } else if (existingRes.status !== 404) {
+    throw new Error(`No se pudo verificar la imagen actual en GitHub (${existingRes.status}).`);
+  }
+
+  const putRes = await fetch(imageApiUrl, {
+    method: "PUT",
+    headers: { ...ghHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: "Actualiza la imagen del banner desde el panel de administración",
+      content: base64Data,
+      branch: BRANCH,
+      ...(sha ? { sha } : {})
+    })
+  });
+  if (!putRes.ok) {
+    const errText = await putRes.text();
+    throw new Error(`GitHub rechazó la imagen (${putRes.status}): ${errText.slice(0, 300)}`);
+  }
+
+  return imagePath;
 }
 
 exports.handler = async (event) => {
@@ -85,7 +143,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "JSON inválido" }) };
   }
 
-  const { password, content } = body;
+  const { password, content, bannerImageUpload } = body;
 
   if (!process.env.ADMIN_PASSWORD) {
     return { statusCode: 500, body: JSON.stringify({ error: "El panel no está configurado (falta ADMIN_PASSWORD)." }) };
@@ -100,12 +158,23 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: "El panel no está configurado (falta GITHUB_TOKEN)." }) };
   }
 
-  const apiUrl = `https://api.github.com/repos/${REPO}/contents/${PATH}`;
   const ghHeaders = {
     Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
     "User-Agent": "onnno-admin-panel",
     Accept: "application/vnd.github+json"
   };
+
+  let workingContent = content;
+  if (bannerImageUpload) {
+    try {
+      const imagePath = await commitBannerImage(bannerImageUpload, ghHeaders);
+      workingContent = { ...content, banner: { ...(content.banner || {}), image: imagePath } };
+    } catch (err) {
+      return { statusCode: 400, body: JSON.stringify({ error: err.message || String(err) }) };
+    }
+  }
+
+  const apiUrl = `https://api.github.com/repos/${REPO}/contents/${PATH}`;
 
   try {
     const getRes = await fetch(`${apiUrl}?ref=${BRANCH}`, { headers: ghHeaders });
@@ -115,7 +184,7 @@ exports.handler = async (event) => {
     const current = await getRes.json();
     const currentContent = JSON.parse(Buffer.from(current.content, "base64").toString("utf-8"));
 
-    const merged = sanitizeMerge(currentContent, content);
+    const merged = sanitizeMerge(currentContent, workingContent);
     const newBase64 = Buffer.from(JSON.stringify(merged, null, 2) + "\n", "utf-8").toString("base64");
 
     const putRes = await fetch(apiUrl, {

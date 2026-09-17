@@ -55,9 +55,36 @@
     color:var(--ink);
   }
   textarea{ resize:vertical; min-height:4.5rem; }
+  select{
+    width:100%;
+    font:inherit;
+    font-size:.95rem;
+    padding:.55rem .65rem;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    color:var(--ink);
+  }
   .checkbox{ display:flex; align-items:center; gap:.5rem; font-size:.9rem; color:var(--ink); }
   .checkbox input{ width:auto; }
   .hint{ font-size:.76rem; color:var(--ink-faint); margin:.25rem 0 0; }
+  .image-field{
+    display:flex;
+    gap:.85rem;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  .image-field img{
+    width:96px;
+    height:96px;
+    object-fit:cover;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:#fff;
+  }
+  .image-field img[hidden]{ display:none; }
+  .image-field-controls{ flex:1; min-width:180px; }
+  input[type="file"]{ font-size:.85rem; }
   button{
     font:inherit;
     font-weight:700;
@@ -142,9 +169,15 @@
 
       <label class="checkbox"><input id="bannerEnabled" name="banner.enabled" type="checkbox"> Mostrar el banner en el sitio</label>
 
-      <label for="bannerImage">Imagen (ruta o URL)</label>
-      <input id="bannerImage" name="banner.image" type="text">
-      <p class="hint">Ej. assets/img/mi-anuncio.jpg (debe existir en el sitio) o una URL que empiece con https://</p>
+      <label for="bannerImageFile">Imagen</label>
+      <div class="image-field">
+        <img id="bannerImagePreview" alt="Vista previa de la imagen del banner" hidden>
+        <div class="image-field-controls">
+          <input id="bannerImageFile" type="file" accept="image/jpeg,image/png,image/webp">
+          <p class="hint">JPG, PNG o WEBP, máximo 4 MB. Reemplaza la imagen actual al guardar; si no eliges una nueva, se conserva la que ya está.</p>
+          <p id="bannerImageError" class="hint error" hidden></p>
+        </div>
+      </div>
 
       <label for="bannerImageAlt">Texto alternativo de la imagen</label>
       <input id="bannerImageAlt" name="banner.imageAlt" type="text">
@@ -154,6 +187,13 @@
 
       <label for="bannerSubtitle">Subtítulo</label>
       <input id="bannerSubtitle" name="banner.subtitle" type="text">
+
+      <label for="confettiStyle">Animación del confeti al abrir el banner</label>
+      <select id="confettiStyle" name="banner.confettiStyle">
+        <option value="clasico">Clásico — cae como lluvia</option>
+        <option value="fuegos">Fuegos artificiales — estalla desde el centro</option>
+        <option value="espiral">Espiral — remolino que sube girando</option>
+      </select>
     </fieldset>
 
     <div id="save-row">
@@ -169,12 +209,17 @@
   "use strict";
 
   var PASS_KEY = "onnno_admin_pw";
+  var MAX_IMAGE_BYTES = 4 * 1024 * 1024;
   var gate = document.getElementById("gate");
   var form = document.getElementById("form");
   var passwordInput = document.getElementById("password");
   var gateError = document.getElementById("gate-error");
   var saveStatus = document.getElementById("save-status");
+  var bannerImageFile = document.getElementById("bannerImageFile");
+  var bannerImagePreview = document.getElementById("bannerImagePreview");
+  var bannerImageError = document.getElementById("bannerImageError");
   var currentContent = null;
+  var pendingBannerImage = null; // {dataUrl, filename} once the customer picks a new file, until save succeeds
 
   function getPath(obj, path) {
     return path.split(".").reduce(function (acc, k) {
@@ -192,6 +237,16 @@
     cur[keys[keys.length - 1]] = value;
   }
 
+  function updateImagePreview(src) {
+    if (src) {
+      bannerImagePreview.src = src;
+      bannerImagePreview.hidden = false;
+    } else {
+      bannerImagePreview.removeAttribute("src");
+      bannerImagePreview.hidden = true;
+    }
+  }
+
   function fillForm(content) {
     currentContent = content;
     form.querySelectorAll("[name]").forEach(function (el) {
@@ -199,6 +254,10 @@
       if (el.type === "checkbox") el.checked = !!val;
       else el.value = val == null ? "" : val;
     });
+    pendingBannerImage = null;
+    bannerImageFile.value = "";
+    bannerImageError.hidden = true;
+    updateImagePreview(content && content.banner && content.banner.image);
   }
 
   function collectContent() {
@@ -209,6 +268,36 @@
     });
     return out;
   }
+
+  bannerImageFile.addEventListener("change", function () {
+    bannerImageError.hidden = true;
+    var file = bannerImageFile.files && bannerImageFile.files[0];
+    if (!file) return;
+
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      bannerImageError.textContent = "Formato no permitido. Usa JPG, PNG o WEBP.";
+      bannerImageError.hidden = false;
+      bannerImageFile.value = "";
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      bannerImageError.textContent = "La imagen pesa demasiado (máximo 4 MB).";
+      bannerImageError.hidden = false;
+      bannerImageFile.value = "";
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      pendingBannerImage = { dataUrl: reader.result, filename: file.name };
+      updateImagePreview(reader.result);
+    };
+    reader.onerror = function () {
+      bannerImageError.textContent = "No se pudo leer esa imagen. Intenta con otro archivo.";
+      bannerImageError.hidden = false;
+    };
+    reader.readAsDataURL(file);
+  });
 
   function showGateError(msg) {
     gateError.textContent = msg;
@@ -266,13 +355,16 @@
     }
     var pw = sessionStorage.getItem(PASS_KEY) || passwordInput.value.trim();
     var content = collectContent();
-    saveStatus.textContent = "Guardando…";
+    saveStatus.textContent = pendingBannerImage ? "Subiendo imagen y guardando…" : "Guardando…";
     saveStatus.className = "";
+
+    var payload = { password: pw, content: content };
+    if (pendingBannerImage) payload.bannerImageUpload = pendingBannerImage;
 
     fetch("/.netlify/functions/save-content", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pw, content: content })
+      body: JSON.stringify(payload)
     })
       .then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (data) {
@@ -281,7 +373,12 @@
       })
       .then(function (result) {
         if (!result.ok) throw new Error((result.data && result.data.error) || "Error al guardar.");
-        if (result.data && result.data.content) currentContent = result.data.content;
+        if (result.data && result.data.content) {
+          currentContent = result.data.content;
+          pendingBannerImage = null;
+          bannerImageFile.value = "";
+          updateImagePreview(currentContent.banner && currentContent.banner.image);
+        }
         saveStatus.textContent = "Guardado. El sitio se actualizará en uno o dos minutos.";
         saveStatus.className = "ok";
       })

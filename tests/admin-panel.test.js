@@ -25,7 +25,7 @@ const SAMPLE_CONTENT = {
   },
   social: { instagramUrl: "https://www.instagram.com/onnno.mx/", instagramHandle: "@onnno.mx" },
   heroTagline: "Restaurante / Panadería / 2018—2026",
-  banner: { enabled: false, image: "assets/img/x.jpg", imageAlt: "alt", title: "T", subtitle: "S" }
+  banner: { enabled: false, image: "assets/img/x.jpg", imageAlt: "alt", title: "T", subtitle: "S", confettiStyle: "clasico" }
 };
 
 const VERIFY_URL = "/.netlify/functions/verify-password";
@@ -64,6 +64,17 @@ function loadAdminPage(routes, { confirmReturns = true } = {}) {
 
 function fill(window, id, value) {
   window.document.getElementById(id).value = value;
+}
+
+// jsdom won't let a real browser assign input.files (security), but jsdom
+// itself isn't a real browser sandbox — defining the property directly and
+// firing "change" is the standard way to simulate a file picked by the user.
+function selectFile(window, id, bytes, filename, mime) {
+  const input = window.document.getElementById(id);
+  const file = new window.File([bytes], filename, { type: mime });
+  Object.defineProperty(input, "files", { value: [file], configurable: true });
+  input.dispatchEvent(new window.Event("change", { bubbles: true }));
+  return file;
 }
 
 async function flushMicrotasks() {
@@ -116,6 +127,9 @@ test("a correct password verifies, then loads content.json and reveals the popul
   assert.equal(window.document.getElementById("form").hidden, false);
   assert.equal(window.document.getElementById("restaurantAddress").value, "Mártires de Tacubaya 308‑C");
   assert.equal(window.document.getElementById("bannerEnabled").checked, false);
+  assert.equal(window.document.getElementById("confettiStyle").value, "clasico");
+  assert.equal(window.document.getElementById("bannerImagePreview").getAttribute("src"), "assets/img/x.jpg");
+  assert.equal(window.document.getElementById("bannerImagePreview").hidden, false);
   assert.equal(window.sessionStorage.getItem("onnno_admin_pw"), "the-real-password");
 });
 
@@ -198,6 +212,100 @@ test("if the password is later rejected on save (e.g. rotated mid-session), clea
   assert.match(status.textContent, /Contraseña incorrecta/);
   assert.equal(status.className, "error");
   assert.equal(window.sessionStorage.getItem("onnno_admin_pw"), null);
+});
+
+test("picking a valid image file shows a preview and queues it, without touching it yet", async () => {
+  const window = loadAdminPage({ [VERIFY_URL]: okVerify(), [CONTENT_URL]: okContent() });
+  await unlockAs(window, "pw");
+
+  selectFile(window, "bannerImageFile", "fake-image-bytes", "foto.png", "image/png");
+  await flushMicrotasks();
+
+  const preview = window.document.getElementById("bannerImagePreview");
+  assert.equal(preview.hidden, false);
+  assert.match(preview.getAttribute("src"), /^data:image\/png;base64,/);
+  assert.equal(window.document.getElementById("bannerImageError").hidden, true);
+});
+
+test("picking a disallowed file type shows an error and does not touch the preview", async () => {
+  const window = loadAdminPage({ [VERIFY_URL]: okVerify(), [CONTENT_URL]: okContent() });
+  await unlockAs(window, "pw");
+
+  selectFile(window, "bannerImageFile", "not-an-image", "archivo.gif", "image/gif");
+  await flushMicrotasks();
+
+  const error = window.document.getElementById("bannerImageError");
+  assert.equal(error.hidden, false);
+  assert.match(error.textContent, /formato/i);
+  assert.equal(window.document.getElementById("bannerImagePreview").getAttribute("src"), "assets/img/x.jpg", "must keep showing the existing image, not the rejected file");
+});
+
+test("picking an oversized file shows an error and rejects it client-side (before any request)", async () => {
+  const window = loadAdminPage({ [VERIFY_URL]: okVerify(), [CONTENT_URL]: okContent() });
+  await unlockAs(window, "pw");
+
+  const bigBytes = new Uint8Array(5 * 1024 * 1024); // 5MB > the 4MB limit
+  selectFile(window, "bannerImageFile", bigBytes, "grande.png", "image/png");
+  await flushMicrotasks();
+
+  const error = window.document.getElementById("bannerImageError");
+  assert.equal(error.hidden, false);
+  assert.match(error.textContent, /4 MB/);
+});
+
+test("saving with a picked image sends bannerImageUpload, then refreshes the preview from the response", async () => {
+  let savedBody = null;
+  const newContent = { ...SAMPLE_CONTENT, banner: { ...SAMPLE_CONTENT.banner, image: "assets/img/banner-custom.png" } };
+  const window = loadAdminPage({
+    [VERIFY_URL]: okVerify(),
+    [CONTENT_URL]: okContent(),
+    [SAVE_URL]: async (opts) => { savedBody = JSON.parse(opts.body); return { ok: true, data: { ok: true, content: newContent } }; }
+  }, { confirmReturns: true });
+
+  await unlockAs(window, "pw");
+  selectFile(window, "bannerImageFile", "fake-image-bytes", "foto.png", "image/png");
+  await flushMicrotasks();
+
+  window.document.getElementById("form").dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true }));
+  await flushMicrotasks();
+
+  assert.ok(savedBody.bannerImageUpload, "expected the picked file to be sent as bannerImageUpload");
+  assert.equal(savedBody.bannerImageUpload.filename, "foto.png");
+  assert.match(savedBody.bannerImageUpload.dataUrl, /^data:image\/png;base64,/);
+
+  assert.equal(window.document.getElementById("bannerImagePreview").getAttribute("src"), "assets/img/banner-custom.png");
+  assert.equal(window.document.getElementById("save-status").className, "ok");
+});
+
+test("saving without picking a new image never sends bannerImageUpload", async () => {
+  let savedBody = null;
+  const window = loadAdminPage({
+    [VERIFY_URL]: okVerify(),
+    [CONTENT_URL]: okContent(),
+    [SAVE_URL]: async (opts) => { savedBody = JSON.parse(opts.body); return { ok: true, data: { ok: true, content: SAMPLE_CONTENT } }; }
+  }, { confirmReturns: true });
+
+  await unlockAs(window, "pw");
+  window.document.getElementById("form").dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true }));
+  await flushMicrotasks();
+
+  assert.equal(savedBody.bannerImageUpload, undefined);
+});
+
+test("the confetti style select is included in the saved content", async () => {
+  let savedBody = null;
+  const window = loadAdminPage({
+    [VERIFY_URL]: okVerify(),
+    [CONTENT_URL]: okContent(),
+    [SAVE_URL]: async (opts) => { savedBody = JSON.parse(opts.body); return { ok: true, data: { ok: true, content: SAMPLE_CONTENT } }; }
+  }, { confirmReturns: true });
+
+  await unlockAs(window, "pw");
+  window.document.getElementById("confettiStyle").value = "fuegos";
+  window.document.getElementById("form").dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true }));
+  await flushMicrotasks();
+
+  assert.equal(savedBody.content.banner.confettiStyle, "fuegos");
 });
 
 test("admin.html declares noindex so it doesn't end up in search results", () => {
