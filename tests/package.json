@@ -1,0 +1,13 @@
+{
+  "name": "onnno-admin-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Dev-only test suite for the admin panel (content.js, admin.html, save-content function). Isolated in tests/ on purpose so its node_modules never reaches the Netlify static/functions deploy.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

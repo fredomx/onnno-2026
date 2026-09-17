@@ -1,3 +1,6 @@
 .DS_Store
 Thumbs.db
 *.log
+
+# dev-only test tooling (tests/), never part of the Netlify deploy
+tests/node_modules/
