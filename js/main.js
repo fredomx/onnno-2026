@@ -415,10 +415,10 @@ function unlockBodyScroll(){
 })();
 
 /* ============================== BIRTHDAY ANNOUNCEMENT ==============================
-   Shows the 8th-anniversary invite automatically on every page load, with a
-   confetti burst on open. Self-contained on purpose — safe to delete this
-   whole block, its HTML in index.html, and its CSS block, once the
-   promotion is over. */
+   Shows an announcement automatically on every page load, with a confetti
+   burst on open. Currently inert: the markup in index.html is commented out,
+   so this block bails immediately. Uncomment that markup to run a future
+   banner — this JS and the .birthday CSS are reused as-is. */
 (function () {
   "use strict";
 
