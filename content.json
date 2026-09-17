@@ -1,23 +1,23 @@
 {
   "contact": {
-    "restaurantAddress": "Mártires de Tacubaya 308‑C test",
+    "restaurantAddress": "Mártires de Tacubaya 308‑C",
     "restaurantMapUrl": "https://share.google/Bqj0bsnnkAFdw4XeE",
-    "bakeryAddress": "Morelos 1201 test",
+    "bakeryAddress": "Morelos 1201",
     "bakeryMapUrl": "https://share.google/AIkUxS0r8s1oV5UMO",
-    "city": "Oaxaca de Juárez, Oaxaca, México test",
-    "hoursBakery": "Lunes–viernes: 7:30 a.m.–8 p.m. test \nSábado: 7:30 a.m.–5 p.m.\nDomingo: 7:30 a.m.–3 p.m.",
-    "hoursRestaurant": "Lunes–domingo: 8 a.m.–4 p.m. test"
+    "city": "Oaxaca de Juárez, Oaxaca, México",
+    "hoursBakery": "Lunes–viernes: 7:30 a.m.–8 p.m. \nSábado: 7:30 a.m.–5 p.m.\nDomingo: 7:30 a.m.–3 p.m.",
+    "hoursRestaurant": "Lunes–domingo: 8 a.m.–4 p.m"
   },
   "social": {
     "instagramUrl": "https://www.instagram.com/onnno.mx/",
     "instagramHandle": "@onnno.mx"
   },
-  "heroTagline": "Restaurante / Panadería / 2018—2026 test",
+  "heroTagline": "Restaurante / Panadería / 2018—2026",
   "banner": {
     "enabled": true,
     "image": "assets/img/birthday-announcement.jpg",
-    "imageAlt": "Invitación especial de Onnno test",
-    "title": "¡Feliz cumpleaños, Onnno! Test",
+    "imageAlt": "Invitación especial de Onnno",
+    "title": "¡Feliz cumpleaños, Onnno!",
     "subtitle": "8 años — jueves 10 de septiembre · menú especial · Mártires de Tacubaya 308"
   }
 }
